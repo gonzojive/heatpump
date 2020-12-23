@@ -6,10 +6,9 @@ heat pump. The components of the system are as follows:
 
 1. A Raspberry Pi.
 2. The [Chiltrix CX34](https://www.chiltrix.com/small-chiller-home.html) heat
-
-   pump chiller. The Pi communicates with the chiller using using
-   [RS485](https://en.wikipedia.org/wiki/RS-485), which is used
-   natively by the CX34 to communicate with its controller per the [wiring
+   pump chiller. The Pi communicates with the chiller using using [serial
+   communication](https://en.wikipedia.org/wiki/RS-485), which is used natively
+   by the CX34 to talk with its controller per the [wiring
    diagram](https://www.chiltrix.com/documents/CX34-2-wiring-diagram-HIGH-RES.pdf)
    and [ProtoAir FPA-W44
    manual](https://www.chiltrix.com/control-options/Remote-Gateway-BACnet-Guide-rev2.pdf).
@@ -19,9 +18,7 @@ heat pump. The components of the system are as follows:
 
 4. Optional [DS18B20](https://www.adafruit.com/product/381) temperature sensors,
    which can now be bought for about $2 each. Several temperature sensors can be
-   connected to single GPIO port on the Pi. I followed [this
-   guide](https://www.circuitbasics.com/raspberry-pi-ds18b20-temperature-sensor-tutorial/#:~:text=The%20DS18B20%20temperature%20sensor%20is,
-   accurate%20and%20take%20measurements%20quickly.) to get up and running and
+   connected to single GPIO port on the Pi. I followed [this guide](https://www.circuitbasics.com/raspberry-pi-ds18b20-temperature-sensor-tutorial/#:~:text=The%20DS18B20%20temperature%20sensor%20is,accurate%20and%20take%20measurements%20quickly.) to get up and running and
    then wrote the `github.com/gonzojive/heatpump/tempsensor` Go package to read
    the sensor values.
 
