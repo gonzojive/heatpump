@@ -22,10 +22,16 @@ const (
 	slaveID  = 1
 )
 
+// Mode indicates the protocol that should be used to communicate with the CX34.
 type Mode string
 
+// Valid modes.
 const (
-	Modbus   Mode = "modbus"
+	// Modbus mode uses modbus to communicate with the CX34. This is a
+	// standardized protocol, but so far the library doesn't support it.
+	Modbus Mode = "modbus"
+
+	// CX34Text uses a proprietary protocol from Onrom to communicate with the CX34.
 	CX34Text Mode = "cx34text"
 )
 
