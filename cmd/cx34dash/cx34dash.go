@@ -6,122 +6,57 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
-	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/gonzojive/heatpump/cx34"
-	"github.com/gonzojive/heatpump/tempsensor"
+	"github.com/gonzojive/heatpump/proto/chiltrix"
 )
 
 var (
-	root           = flag.String("root", "/", "Raspberry Pi filesystem root. Set to non-default value for testing with sshd on another computer.")
-	httpPort       = flag.Int("port", 8081, "HTTP server port.")
-	rs484TTYModbus = flag.String("modbus-device", "/dev/ttyUSB0", "Path to USB-to-RS485 device connected to modbus.")
-	rs484TTYOnron  = flag.String("omron-device", "/dev/ttyUSB1", "Path to USB-to-RS485 device connected to the controller.")
-	outputLog      = flag.String("omron-log", "/tmp/serial-log.txt", "Path to USB-to-RS485 device.")
-	rawOutputLog   = flag.String("omron-raw-log", "/tmp/serial-log.bin", "Path to USB-to-RS485 raw output log.")
+	httpPort      = flag.Int("port", 8081, "HTTP server port.")
+	historianAddr = flag.String("collector", ":8082", "Address of the cx34collector gRPC service. May be on a remote machine.")
 
 	markdown = goldmark.New(goldmark.WithExtensions(extension.NewTable()))
 )
 
 const (
 	reportInterval = time.Minute
+
+	dashboardWindow = time.Hour * 24 * 14
 )
 
 func main() {
 	flag.Parse()
-	f, err := os.Create(*outputLog)
-	if err != nil {
-		glog.Exitf("failed to open output log file: %v", err)
+	if err := run(context.Background()); err != nil {
+		glog.Exitf("%v", err)
 	}
-	rf, err := os.Create(*rawOutputLog)
-	if err != nil {
-		glog.Exitf("failed to open output log file: %v", err)
-	}
-	logger := cx34.NewLogger(f, rf)
-	defer f.Close()
-	defer rf.Close()
-	config := &tempsensor.Config{Root: *root}
-	eg, ctx := errgroup.WithContext(context.Background())
-	eg.Go(func() error {
-		ticker := time.NewTicker(reportInterval)
+}
 
-		defer ticker.Stop()
-		for {
-			r, err := tempsensor.DebugReport(config)
-			if err != nil {
-				glog.Errorf("got error: %v", err)
-			} else {
-				glog.Infof("%s\n", r)
-			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-ticker.C:
-			}
-		}
-	})
-	eg.Go(func() error {
-		c, err := cx34.Connect(&cx34.Params{TTYDevice: *rs484TTYModbus, LogWriter: logger, Mode: cx34.Modbus})
-		glog.Errorf("result of modbus connection: %v, %v", c, err)
-		server := &server{config, c, nil, &sync.RWMutex{}, make(map[cx34.Register]bool)}
-		server.registerHandlers()
-		var state *cx34.State
-		for {
-			time.Sleep(time.Second * 10)
-			newState, err := c.ReadState()
-			if err != nil {
-				glog.Errorf("error getting CX34 state: %v", err)
-				continue
-			}
+func run(ctx context.Context) error {
 
-			if state != nil {
-				if diff, diffRegs := cx34.DiffStates(state, newState); len(diffRegs) != 0 {
-					glog.Infof("CX34 state diff:\n%s", diff)
-					for k := range diffRegs {
-						server.hpInterestingRegisters[k] = true
-					}
-				}
-			}
-			state = newState
-			server.setCX34State(newState)
-		}
-	})
-	eg.Go(func() error {
-		server := &http.Server{Addr: fmt.Sprintf(":%d", *httpPort)}
-		glog.Infof("starting http server at http://localhost:%d", *httpPort)
-		return server.ListenAndServe()
-	})
-	if err := eg.Wait(); err != nil {
-		glog.Exitf("error: %v", err)
+	// Set up a connection to the server.
+	conn, err := grpc.Dial(*historianAddr, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		return fmt.Errorf("did not connect: %w", err)
 	}
+	defer conn.Close()
+	c := chiltrix.NewHistorianClient(conn)
+
+	server := &server{c}
+	server.registerHandlers()
+
+	return (&http.Server{Addr: fmt.Sprintf(":%d", *httpPort)}).ListenAndServe()
 }
 
 type server struct {
-	config                 *tempsensor.Config
-	hpClient               *cx34.Client
-	hpState                *cx34.State
-	hpStateLock            *sync.RWMutex
-	hpInterestingRegisters map[cx34.Register]bool
-}
-
-func (s *server) cx34State() *cx34.State {
-	s.hpStateLock.RLock()
-	defer s.hpStateLock.RUnlock()
-	return s.hpState
-}
-
-func (s *server) setCX34State(v *cx34.State) {
-	s.hpStateLock.Lock()
-	defer s.hpStateLock.Unlock()
-	s.hpState = v
+	c chiltrix.HistorianClient
 }
 
 func (s *server) registerHandlers() {
@@ -130,37 +65,37 @@ func (s *server) registerHandlers() {
 }
 
 func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
-	out := &strings.Builder{}
-
-	report, _ := tempsensor.DebugReport(s.config)
-	out.WriteString(fmt.Sprintf("## Temperature report\n\n%s\n", report))
-
-	hpReport := "## Heat Pump report\n"
-
-	cx34State := s.cx34State()
-	if cx34State == nil {
-		hpReport += fmt.Sprintf("\n heat pump state unavailable:\n\n")
-	} else {
-		hpReport += fmt.Sprintf("\n%s\n", cx34State.Report(false, s.hpInterestingRegisters))
-	}
-	out.WriteString(hpReport)
-
+	wantContentType := htmlContent
 	if strings.HasSuffix(r.URL.Path, ".md") {
-		glog.Infof("got request for index.md...")
-		w.Header().Set("Content-Type", "text/markdown; charset=UTF-8")
-		w.Write([]byte(out.String()))
-		return
+		wantContentType = markdownContent
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
-	glog.Infof("got request for report.html...")
-	mdHTML := &strings.Builder{}
-	if err := markdown.Convert([]byte(out.String()), mdHTML); err != nil {
-		w.Header().Set("Content-Type", "text; charset=UTF-8")
-		glog.Errorf("error rendering markdown: %s", err)
+	resp, err := s.dashboardContent(r.Context(), wantContentType)
+
+	finalContentType := wantContentType
+	if wantContentType == markdownContent && err == nil && resp.contentType != markdownContent {
+		err = fmt.Errorf("internal error: requested markdown but got %s", resp.contentType)
+	}
+
+	w.Header().Set("Content-Type", finalContentType.headerValue())
+
+	if err != nil {
+		glog.Errorf("error generating dashboard response: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	if resp.contentType == wantContentType {
+		w.Write([]byte(resp.text))
 		return
 	}
-	fmt.Fprintf(w, `
+	if wantContentType == htmlContent && resp.contentType == markdownContent {
+		mdHTML := &strings.Builder{}
+		if err := markdown.Convert([]byte(resp.text), mdHTML); err != nil {
+			w.Header().Set("Content-Type", "text; charset=UTF-8")
+			glog.Errorf("error rendering markdown: %s", err)
+			return
+		}
+		fmt.Fprintf(w, `
 		<html>
 			<head>
 				<title>waterpi report</title>
@@ -170,6 +105,56 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 			<body class="markdown-body">%s</body>
 		</html>
 		`, css, mdHTML)
+		return
+	}
+	glog.Errorf("unhandled report request")
+
+}
+
+func (s *server) dashboardContent(ctx context.Context, wantContentType contentType) (content, error) {
+	end := time.Now()
+	start := end.Add(-1 * dashboardWindow)
+
+	queryClient, err := s.c.QueryStream(ctx, &chiltrix.QueryStreamRequest{
+		StartTime: timestamppb.New(start),
+		EndTime:   timestamppb.New(end),
+	})
+	if err != nil {
+		return content{
+			text:        fmt.Sprintf("## Error\n\n```\n%s\n```\n", err.Error()),
+			contentType: markdownContent,
+		}, nil
+	}
+
+	var states []*cx34.State
+	queryClient.Recv()
+
+	out := &strings.Builder{}
+
+	hpReport := "## Heat Pump report\n"
+
+	hpReport += fmt.Sprintf("\n%d state snapshots between %s and %s")
+	out.WriteString(hpReport)
+
+	// TODO: Use https://plotly.com/javascript/time-series/ to render
+	// time series plots.
+}
+
+type content struct {
+	text        string
+	contentType contentType
+}
+
+type contentType string
+
+const (
+	htmlContent     contentType = "text/html"
+	markdownContent contentType = "text/markdown; charset=UTF-8"
+)
+
+// headerValue returns the Content-Type HTTP header for this content type.
+func (ct contentType) headerValue() string {
+	return string(ct)
 }
 
 func indent(content, indent string) string {

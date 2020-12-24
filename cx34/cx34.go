@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
 	"sort"
 	"time"
 
@@ -161,6 +162,24 @@ func (c *Client) CheckConnection() error {
 type State struct {
 	collectionTime time.Time
 	registerValues map[Register]uint16
+}
+
+// StateFromProto converts a state proto into a State object.
+func StateFromProto(msg *chiltrix.State) (*State, error) {
+	m := make(map[Register]uint16)
+	for k, v := range msg.GetRegisterValues().GetHoldingRegisterValues() {
+		if k > math.MaxUint16 {
+			return nil, fmt.Errorf("register key %d is larger than the max uint16 %d", k, math.MaxInt16)
+		}
+		if v > math.MaxUint16 {
+			return nil, fmt.Errorf("register[%d] value %d is larger than the max uint16 %d", k, v, math.MaxInt16)
+		}
+		m[Register(k)] = uint16(v)
+	}
+	if msg.GetCollectionTime() == nil {
+		return nil, fmt.Errorf("state is missing collection time")
+	}
+	return &State{msg.CollectionTime.AsTime(), m}, nil
 }
 
 // Report returns a human readable summary of the state of the heat pump.
