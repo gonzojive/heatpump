@@ -13,6 +13,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/mdtable"
 	"github.com/howeyc/crc16"
+	"go.uber.org/multierr"
 )
 
 // Parameters from https://www.chiltrix.com/control-options/Remote-Gateway-BACnet-Guide-rev2.pdf
@@ -69,7 +70,7 @@ func Connect(p *Params) (*Client, error) {
 	handler.Parity = parity
 	handler.StopBits = stopBits
 	handler.SlaveId = slaveID
-	handler.Timeout = 5 * time.Second
+	handler.Timeout = 10 * time.Second
 	handler.RS485 = serial.RS485Config{
 		Enabled:            false,
 		DelayRtsAfterSend:  0,
@@ -98,7 +99,12 @@ func Connect(p *Params) (*Client, error) {
 	}
 
 	client := modbus.NewClient(handler)
-	return &Client{client}, nil
+	c := &Client{client}
+
+	if err := c.CheckConnection(); err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 // ReadState returns a snapshot of the state of the heat pump.
@@ -122,11 +128,31 @@ func (c *Client) ReadState() (*State, error) {
 			return nil, fmt.Errorf("returned register data of length %d exceeds expected length %d", len(results)/2, count)
 		}
 		for j := 0; j < len(results)/2; j++ {
-			value := uint16(results[j*2])<<8 + uint16(results[j*2])
+			value := uint16(results[j*2])<<8 + uint16(results[j*2+1])
 			m[Register(j)+i] = value
 		}
 	}
 	return &State{m}, nil
+}
+
+// CheckConnection attempts to connect to the heat pump and returns an error if the connection fails.
+func (c *Client) CheckConnection() error {
+	_, err := c.ReadState()
+	return err
+	var finalErr error
+	if _, err := c.c.ReadCoils(1, 1); err != nil {
+		finalErr = multierr.Append(finalErr, fmt.Errorf("ReadCoils error: %w", err))
+	}
+	if _, err := c.c.ReadInputRegisters(1, 1); err != nil {
+		finalErr = multierr.Append(finalErr, fmt.Errorf("ReadInputRegisters error: %w", err))
+	}
+	if _, err := c.c.ReadFIFOQueue(1); err != nil {
+		finalErr = multierr.Append(finalErr, fmt.Errorf("ReadFIFOQueue error: %w", err))
+	}
+	if _, err := c.c.ReadDiscreteInputs(1, 1); err != nil {
+		finalErr = multierr.Append(finalErr, fmt.Errorf("ReadDiscreteInputs error: %w", err))
+	}
+	return finalErr
 }
 
 // State is a snapshot of the heat pump's state.
@@ -134,32 +160,72 @@ type State struct {
 	registerValues map[Register]uint16
 }
 
-// String returns a human readable summary of the state of the heat pump.
-func (s *State) String() string {
+// Report returns a human readable summary of the state of the heat pump.
+func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) string {
 	type entry struct {
 		reg   Register
 		value uint16
 	}
 	var entries []entry
 	for k, v := range s.registerValues {
+		if len(interestingRegisters) != 0 && !interestingRegisters[k] {
+			continue
+		}
+		if (v == 0) && omitZeros {
+			continue
+		}
 		entries = append(entries, entry{k, v})
 	}
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].reg < entries[j].reg
 	})
 	b := &mdtable.Builder{}
-	b.SetHeader([]string{"Register", "Value"})
+	b.SetHeader([]string{"Register no.", "Register name", "Value"})
 	for _, e := range entries {
-		b.AddRow([]string{fmt.Sprintf("%d", e.reg), fmt.Sprintf("%d", e.value)})
+		b.AddRow([]string{fmt.Sprintf("%d", e.reg), e.reg.String(), fmt.Sprintf("%d", e.value)})
 	}
 	return b.Build()
+}
+
+// String returns a human readable summary of the state of the heat pump.
+func (s *State) String() string {
+	return s.Report(false, nil)
+}
+
+func DiffStates(a, b *State) (string, map[Register]bool) {
+	diffRegs := map[Register]bool{}
+	type entry struct {
+		reg  Register
+		a, b uint16
+	}
+	var entries []entry
+	for k, v := range a.registerValues {
+		if v != b.registerValues[k] {
+			entries = append(entries, entry{k, v, b.registerValues[k]})
+			diffRegs[k] = true
+		}
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].reg < entries[j].reg
+	})
+	builder := &mdtable.Builder{}
+	builder.SetHeader([]string{"Register no.", "Register name", "Old Value", "New Value"})
+	for _, e := range entries {
+		builder.AddRow([]string{fmt.Sprintf("%d", e.reg), e.reg.String(), fmt.Sprintf("%d", e.a), fmt.Sprintf("%d", e.b)})
+	}
+	return builder.Build(), diffRegs
 }
 
 // Register is a modsbus register
 type Register uint16
 
-// Known Register values.
-const ()
+// String returns a human-readable name of the modbus register.
+func (r Register) String() string {
+	if name, ok := registerNames[r]; ok {
+		return name
+	}
+	return fmt.Sprintf("%d", r)
+}
 
 type Logger struct {
 	debug, raw io.Writer

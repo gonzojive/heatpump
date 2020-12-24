@@ -1,0 +1,10 @@
+// Protocol buffers for storing Chiltrix CX34 data.
+syntax = "proto3";
+
+package chiltrix;
+
+option go_package = "github.com/gonzojive/heatpump/proto/chiltrix";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+import "google/type/money.proto";

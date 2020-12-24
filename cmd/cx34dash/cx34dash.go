@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/glog"
@@ -70,7 +71,28 @@ func main() {
 	eg.Go(func() error {
 		c, err := cx34.Connect(&cx34.Params{TTYDevice: *rs484TTYModbus, LogWriter: logger, Mode: cx34.Modbus})
 		glog.Errorf("result of modbus connection: %v, %v", c, err)
-		(&server{config, c}).registerHandlers()
+		server := &server{config, c, nil, &sync.RWMutex{}, make(map[cx34.Register]bool)}
+		server.registerHandlers()
+		var state *cx34.State
+		for {
+			time.Sleep(time.Second * 10)
+			newState, err := c.ReadState()
+			if err != nil {
+				glog.Errorf("error getting CX34 state: %v", err)
+				continue
+			}
+
+			if state != nil {
+				if diff, diffRegs := cx34.DiffStates(state, newState); len(diffRegs) != 0 {
+					glog.Infof("CX34 state diff:\n%s", diff)
+					for k := range diffRegs {
+						server.hpInterestingRegisters[k] = true
+					}
+				}
+			}
+			state = newState
+			server.setCX34State(newState)
+		}
 		return nil
 	})
 	eg.Go(func() error {
@@ -84,8 +106,23 @@ func main() {
 }
 
 type server struct {
-	config   *tempsensor.Config
-	hpClient *cx34.Client
+	config                 *tempsensor.Config
+	hpClient               *cx34.Client
+	hpState                *cx34.State
+	hpStateLock            *sync.RWMutex
+	hpInterestingRegisters map[cx34.Register]bool
+}
+
+func (s *server) cx34State() *cx34.State {
+	s.hpStateLock.RLock()
+	defer s.hpStateLock.RUnlock()
+	return s.hpState
+}
+
+func (s *server) setCX34State(v *cx34.State) {
+	s.hpStateLock.Lock()
+	defer s.hpStateLock.Unlock()
+	s.hpState = v
 }
 
 func (s *server) registerHandlers() {
@@ -100,12 +137,12 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 	out.WriteString(fmt.Sprintf("## Temperature report\n\n%s\n", report))
 
 	hpReport := "## Heat Pump report\n"
-	cx34State, err := s.hpClient.ReadState()
-	if err != nil {
-		glog.Errorf("error reading heat pump state: %v", err)
-		hpReport += fmt.Sprintf("\n error:\n\n```%s```\n\n", err.Error())
+
+	cx34State := s.cx34State()
+	if cx34State == nil {
+		hpReport += fmt.Sprintf("\n heat pump state unavailable:\n\n")
 	} else {
-		hpReport += fmt.Sprintf("\n%s\n", cx34State)
+		hpReport += fmt.Sprintf("\n%s\n", cx34State.Report(false, s.hpInterestingRegisters))
 	}
 	out.WriteString(hpReport)
 
