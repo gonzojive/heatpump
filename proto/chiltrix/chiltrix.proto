@@ -5,6 +5,22 @@ package chiltrix;
 
 option go_package = "github.com/gonzojive/heatpump/proto/chiltrix";
 
-import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
-import "google/type/money.proto";
+
+// State captures the state of the heat pump at a given instant for archival purposes.
+message State {
+    // Collection time.
+    .google.protobuf.Timestamp collection_time = 1;
+
+    // Modbus register values.
+    RegisterSnapshot register_values = 2;
+}
+
+
+// Snapshot holds the values of all of the heat pump modbus registers for
+// archival purposes.
+message RegisterSnapshot {
+    // The CX34 only supports holding registers, which are 16 bit values.
+    // Protobuf only supports 32-bit values, otherwise we would use uint16.
+    map<uint32, uint32> holding_register_values = 1;
+}

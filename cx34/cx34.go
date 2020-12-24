@@ -12,8 +12,10 @@ import (
 	"github.com/goburrow/serial"
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/mdtable"
+	"github.com/gonzojive/heatpump/proto/chiltrix"
 	"github.com/howeyc/crc16"
 	"go.uber.org/multierr"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Parameters from https://www.chiltrix.com/control-options/Remote-Gateway-BACnet-Guide-rev2.pdf
@@ -132,7 +134,7 @@ func (c *Client) ReadState() (*State, error) {
 			m[Register(j)+i] = value
 		}
 	}
-	return &State{m}, nil
+	return &State{time.Now(), m}, nil
 }
 
 // CheckConnection attempts to connect to the heat pump and returns an error if the connection fails.
@@ -157,6 +159,7 @@ func (c *Client) CheckConnection() error {
 
 // State is a snapshot of the heat pump's state.
 type State struct {
+	collectionTime time.Time
 	registerValues map[Register]uint16
 }
 
@@ -192,6 +195,21 @@ func (s *State) String() string {
 	return s.Report(false, nil)
 }
 
+// Proto returns the protobuf form of state.
+func (s *State) Proto() *chiltrix.State {
+	msg := &chiltrix.State{
+		CollectionTime: timestamppb.New(s.collectionTime),
+		RegisterValues: &chiltrix.RegisterSnapshot{
+			HoldingRegisterValues: make(map[uint32]uint32),
+		},
+	}
+	for reg, value := range s.registerValues {
+		msg.GetRegisterValues().GetHoldingRegisterValues()[uint32(reg.uint16())] = uint32(value)
+	}
+	return msg
+}
+
+// DiffStates returns a human readable description of the difference between two State values.
 func DiffStates(a, b *State) (string, map[Register]bool) {
 	diffRegs := map[Register]bool{}
 	type entry struct {
@@ -218,6 +236,10 @@ func DiffStates(a, b *State) (string, map[Register]bool) {
 
 // Register is a modsbus register
 type Register uint16
+
+func (r Register) uint16() uint16 {
+	return uint16(r)
+}
 
 // String returns a human-readable name of the modbus register.
 func (r Register) String() string {

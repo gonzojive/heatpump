@@ -2,9 +2,9 @@ module github.com/gonzojive/heatpump
 
 go 1.14
 
-replace github.com/goburrow/serial => /home/pi/code/serial
+//replace github.com/goburrow/serial => /home/pi/code/serial
 
-replace github.com/goburrow/modbus => /home/pi/code/modbus
+//replace github.com/goburrow/modbus => /home/pi/code/modbus
 
 require (
 	github.com/goburrow/modbus v0.1.0
