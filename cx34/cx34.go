@@ -5,11 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"sort"
 	"time"
 
 	"github.com/goburrow/modbus"
 	"github.com/goburrow/serial"
 	"github.com/golang/glog"
+	"github.com/gonzojive/heatpump/mdtable"
 	"github.com/howeyc/crc16"
 )
 
@@ -20,6 +22,13 @@ const (
 	stopBits = 1
 	dataBits = 8
 	slaveID  = 1
+)
+
+const (
+	// Valid Holding register range
+	firstHoldingRegister Register = 1
+	lastHoldingRegister  Register = 350
+	registersPerRead              = 120
 )
 
 // Mode indicates the protocol that should be used to communicate with the CX34.
@@ -89,13 +98,68 @@ func Connect(p *Params) (*Client, error) {
 	}
 
 	client := modbus.NewClient(handler)
-	results, err := client.ReadCoils(0, 1)
-	if err != nil {
-		return nil, fmt.Errorf("ReadCoils() failed: %w", err)
-	}
-	glog.Infof("got results %v", results)
 	return &Client{client}, nil
 }
+
+// ReadState returns a snapshot of the state of the heat pump.
+func (c *Client) ReadState() (*State, error) {
+	// ReadCoils, ReadInputRegisters, and ReadDiscreteInputs are not supported.
+	// However, ReadHoldingRegisters is.
+	m := make(map[Register]uint16)
+	for i := firstHoldingRegister; i <= lastHoldingRegister; i += registersPerRead {
+		count := registersPerRead
+		if i+Register(count) > lastHoldingRegister {
+			count = int(lastHoldingRegister) - int(i+1)
+		}
+		results, err := c.c.ReadHoldingRegisters(uint16(i), uint16(count))
+		if err != nil {
+			return nil, fmt.Errorf("ReadHoldingRegisters() failed: %w", err)
+		}
+		if len(results)%2 != 0 {
+			return nil, fmt.Errorf("got register data of length %d, want modulus of 2", len(results))
+		}
+		if len(results)/2 > count {
+			return nil, fmt.Errorf("returned register data of length %d exceeds expected length %d", len(results)/2, count)
+		}
+		for j := 0; j < len(results)/2; j++ {
+			value := uint16(results[j*2])<<8 + uint16(results[j*2])
+			m[Register(j)+i] = value
+		}
+	}
+	return &State{m}, nil
+}
+
+// State is a snapshot of the heat pump's state.
+type State struct {
+	registerValues map[Register]uint16
+}
+
+// String returns a human readable summary of the state of the heat pump.
+func (s *State) String() string {
+	type entry struct {
+		reg   Register
+		value uint16
+	}
+	var entries []entry
+	for k, v := range s.registerValues {
+		entries = append(entries, entry{k, v})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].reg < entries[j].reg
+	})
+	b := &mdtable.Builder{}
+	b.SetHeader([]string{"Register", "Value"})
+	for _, e := range entries {
+		b.AddRow([]string{fmt.Sprintf("%d", e.reg), fmt.Sprintf("%d", e.value)})
+	}
+	return b.Build()
+}
+
+// Register is a modsbus register
+type Register uint16
+
+// Known Register values.
+const ()
 
 type Logger struct {
 	debug, raw io.Writer
@@ -107,7 +171,6 @@ func NewLogger(debug, raw io.Writer) *Logger {
 
 func (l *Logger) Write(p []byte) (n int, err error) {
 	t := time.Now()
-	//n, err = l.data.Write(p)
 	{
 		pdu, err := decodeFrame(p)
 		msg := fmt.Sprintf("error decoding frame: %v", err)

@@ -70,9 +70,9 @@ func main() {
 	eg.Go(func() error {
 		c, err := cx34.Connect(&cx34.Params{TTYDevice: *rs484TTYModbus, LogWriter: logger, Mode: cx34.Modbus})
 		glog.Errorf("result of modbus connection: %v, %v", c, err)
+		(&server{config, c}).registerHandlers()
 		return nil
 	})
-	(&server{config}).registerHandlers()
 	eg.Go(func() error {
 		server := &http.Server{Addr: fmt.Sprintf(":%d", *httpPort)}
 		glog.Infof("starting http server at http://localhost:%d", *httpPort)
@@ -84,19 +84,30 @@ func main() {
 }
 
 type server struct {
-	config *tempsensor.Config
+	config   *tempsensor.Config
+	hpClient *cx34.Client
 }
 
 func (s *server) registerHandlers() {
-	http.HandleFunc("/index.md", s.handleTemperatureReport)
-	http.HandleFunc("/", s.handleTemperatureReport)
+	http.HandleFunc("/index.md", s.handleReport)
+	http.HandleFunc("/", s.handleReport)
 }
 
-func (s *server) handleTemperatureReport(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 	out := &strings.Builder{}
 
 	report, _ := tempsensor.DebugReport(s.config)
 	out.WriteString(fmt.Sprintf("## Temperature report\n\n%s\n", report))
+
+	hpReport := "## Heat Pump report\n"
+	cx34State, err := s.hpClient.ReadState()
+	if err != nil {
+		glog.Errorf("error reading heat pump state: %v", err)
+		hpReport += fmt.Sprintf("\n error:\n\n```%s```\n\n", err.Error())
+	} else {
+		hpReport += fmt.Sprintf("\n%s\n", cx34State)
+	}
+	out.WriteString(hpReport)
 
 	if strings.HasSuffix(r.URL.Path, ".md") {
 		glog.Infof("got request for index.md...")
