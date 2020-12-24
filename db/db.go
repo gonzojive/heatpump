@@ -11,6 +11,8 @@ import (
 	"github.com/dgraph-io/badger/v2/options"
 	"github.com/golang/protobuf/proto"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // Database stores historical values of the heat pump's state.
@@ -92,6 +94,11 @@ func (db *Database) ReadSnapshots(start, end time.Time) ([]*chiltrix.State, erro
 	return states, nil
 }
 
+// HistorianService returns an implementation of chiltrix.Historian.
+func (db *Database) HistorianService() *Service {
+	return &Service{db: db}
+}
+
 func keyForState(state *chiltrix.State) ([]byte, error) {
 	if state.GetCollectionTime() == nil {
 		return nil, fmt.Errorf("cannot store state with no timestamp")
@@ -112,4 +119,30 @@ func sharedPrefix(a, b []byte) []byte {
 		out = a[0 : i+1]
 	}
 	return out
+}
+
+// Service implements chiltrix.HistorianServer and is backed by a Database object.
+type Service struct {
+	chiltrix.UnimplementedHistorianServer
+
+	db *Database
+}
+
+var _ chiltrix.HistorianServer = (*Service)(nil)
+
+// QueryStream returns a stream of State values based on a query.
+func (s *Service) QueryStream(req *chiltrix.QueryStreamRequest, srv chiltrix.Historian_QueryStreamServer) error {
+	states, err := s.db.ReadSnapshots(req.StartTime.AsTime(), req.GetEndTime().AsTime())
+	if err != nil {
+		return status.Errorf(codes.Internal, "database retrieval error: %v", err)
+	}
+
+	for _, s := range states {
+		if err := srv.Send(&chiltrix.QueryStreamResponse{
+			State: s,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -7,6 +7,12 @@ option go_package = "github.com/gonzojive/heatpump/proto/chiltrix";
 
 import "google/protobuf/timestamp.proto";
 
+// A simple key-value storage service
+service Historian {
+  // Provides a value for each key request
+  rpc QueryStream (QueryStreamRequest) returns (stream QueryStreamResponse) {}
+}
+
 // State captures the state of the heat pump at a given instant for archival purposes.
 message State {
     // Collection time.
@@ -23,4 +29,17 @@ message RegisterSnapshot {
     // The CX34 only supports holding registers, which are 16 bit values.
     // Protobuf only supports 32-bit values, otherwise we would use uint16.
     map<uint32, uint32> holding_register_values = 1;
+}
+
+// QueryStreamRequest specifies a request for heatpump states.
+message QueryStreamRequest {
+    // start_time and end_time specify a time range to be queried. Either or both values
+    // may be omitted. 
+    .google.protobuf.Timestamp start_time = 1;
+    .google.protobuf.Timestamp end_time = 2;
+}
+
+// QueryStreamResponse is an element in the returned stream for the QueryStream RPC.
+message QueryStreamResponse {
+    State state = 1;
 }
