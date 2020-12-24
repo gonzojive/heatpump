@@ -93,7 +93,6 @@ func main() {
 			state = newState
 			server.setCX34State(newState)
 		}
-		return nil
 	})
 	eg.Go(func() error {
 		server := &http.Server{Addr: fmt.Sprintf(":%d", *httpPort)}
