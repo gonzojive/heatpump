@@ -5,18 +5,23 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/golang/glog"
+	"github.com/golang/protobuf/proto"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/gonzojive/heatpump/cx34"
+	"github.com/gonzojive/heatpump/mdtable"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
+	"github.com/gonzojive/heatpump/units"
 )
 
 var (
@@ -112,6 +117,7 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) dashboardContent(ctx context.Context, wantContentType contentType) (content, error) {
+	const timeLayout = "2006-01-02T15:04:05"
 	end := time.Now()
 	start := end.Add(-1 * dashboardWindow)
 
@@ -126,18 +132,79 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 		}, nil
 	}
 
+	table := (&mdtable.Builder{}).SetHeader([]string{
+		"Time", "Inlet Temp", "Outlet Temp", "Ambient Temp", "Flow Rate", "Pump Speed", "Approx Power",
+		"Compressor Current", "Inductor Current",
+		"COP",
+	})
+
+	formatTemp := func(t units.Temperature) string {
+		return fmt.Sprintf("%.1f°C (%.1f°F)", t.Celsius(), t.Fahrenheit())
+	}
+
 	var states []*cx34.State
-	queryClient.Recv()
+	totalBytes := 0
+	for {
+		resp, err := queryClient.Recv()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return content{
+				text:        fmt.Sprintf("## Error\n\n```\n%s\n```\n", err.Error()),
+				contentType: markdownContent,
+			}, err
+		}
+		s, err := cx34.StateFromProto(resp.GetState())
+		if err != nil {
+			return content{
+				text:        fmt.Sprintf("## Error\n\n```\n%s\n```\n", err.Error()),
+				contentType: markdownContent,
+			}, err
+		}
+
+		states = append(states, s)
+		totalBytes += proto.Size(resp)
+	}
+	sort.Slice(states, func(i, j int) bool {
+		return states[i].Proto().GetCollectionTime().AsTime().After(states[j].Proto().CollectionTime.AsTime())
+	})
+
+	for _, s := range states {
+		cop := "n/a"
+		if copFrac, ok := s.COP(); ok {
+			cop = fmt.Sprintf("%.1f%%", copFrac.Float64()*100)
+		}
+		cop = fmt.Sprintf("%s (%.1fkW/%.1fkW)", cop, s.UsefulHeatRate().Kilowatts(), s.ApparentPower().Kilowatts())
+
+		table.AddRow([]string{
+			s.Proto().GetCollectionTime().AsTime().Local().Format(timeLayout),
+			formatTemp(s.ACInletWaterTemp()),
+			formatTemp(s.ACOutletWaterTemp()),
+			formatTemp(s.AmbientTemp()),
+			fmt.Sprintf("%.1fL/m", s.FlowRate().LitersPerMinute()),
+			s.InternalPumpSpeed().String(),
+			fmt.Sprintf("%.1fV⋅%.1fA = %.2fkVA", s.ACVoltage().Volts(), s.ACCurrent().Amperes(), s.ApparentPower().Kilowatts()),
+			fmt.Sprintf("%.1fA", s.CompressorCurrent().Amperes()),
+			fmt.Sprintf("%.1fA", s.InductorACCurrent().Amperes()),
+			cop,
+		})
+	}
 
 	out := &strings.Builder{}
 
 	hpReport := "## Heat Pump report\n"
 
-	hpReport += fmt.Sprintf("\n%d state snapshots between %s and %s")
+	hpReport += fmt.Sprintf("\n%d state (%d bytes) snapshots between %s and %s", len(states), totalBytes, start.Local().Format(timeLayout), end.Local().Format(timeLayout))
 	out.WriteString(hpReport)
+	out.WriteString(fmt.Sprintf("\n\n%s\n", table.Build()))
+	return content{
+		text:        out.String(),
+		contentType: markdownContent,
+	}, nil
 
 	// TODO: Use https://plotly.com/javascript/time-series/ to render
 	// time series plots.
+
 }
 
 type content struct {
@@ -148,7 +215,7 @@ type content struct {
 type contentType string
 
 const (
-	htmlContent     contentType = "text/html"
+	htmlContent     contentType = "text/html; charset=UTF-8"
 	markdownContent contentType = "text/markdown; charset=UTF-8"
 )
 
