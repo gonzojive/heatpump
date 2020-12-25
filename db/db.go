@@ -53,6 +53,22 @@ func (db *Database) WriteSnapshot(state *chiltrix.State) error {
 func (db *Database) ReadSnapshots(start, end time.Time) ([]*chiltrix.State, error) {
 	var states []*chiltrix.State
 
+	if err := db.readSnapshotsStreaming(start, end, func(s *chiltrix.State) error {
+		states = append(states, s)
+		return nil
+	}, func() error {
+		states = nil
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	sort.Slice(states, func(i, j int) bool {
+		return states[i].CollectionTime.AsTime().Before(states[j].CollectionTime.AsTime())
+	})
+	return states, nil
+}
+
+func (db *Database) readSnapshotsStreaming(start, end time.Time, callback func(*chiltrix.State) error, restart func() error) error {
 	timeMatches := func(t time.Time) bool {
 		return !t.Before(start) && end.After(t)
 	}
@@ -60,14 +76,23 @@ func (db *Database) ReadSnapshots(start, end time.Time) ([]*chiltrix.State, erro
 	prefix := sharedPrefix(keyForTime(start), keyForTime(end))
 
 	if err := db.badgerDB.View(func(txn *badger.Txn) error {
-		states = nil
+		if err := restart(); err != nil {
+			return fmt.Errorf("callback error: %w", err)
+		}
 
 		opts := badger.DefaultIteratorOptions
 		opts.Prefix = prefix
+		opts.PrefetchValues = true
+		opts.PrefetchSize = 1500
 		it := txn.NewIterator(opts)
 		defer it.Close()
 		iterIsAfterEndTime := false
-		for it.Rewind(); it.Valid() && !iterIsAfterEndTime; it.Next() {
+
+		begin := func() {
+			it.Rewind()
+			it.Seek(keyForTime(start))
+		}
+		for begin(); it.Valid() && !iterIsAfterEndTime; it.Next() {
 			item := it.Item()
 			err := item.Value(func(v []byte) error {
 				state := &chiltrix.State{}
@@ -76,7 +101,9 @@ func (db *Database) ReadSnapshots(start, end time.Time) ([]*chiltrix.State, erro
 				}
 				iterIsAfterEndTime = !state.GetCollectionTime().AsTime().Before(end)
 				if timeMatches(state.GetCollectionTime().AsTime()) {
-					states = append(states, state)
+					if err := callback(state); err != nil {
+						return fmt.Errorf("callback error: %w", err)
+					}
 				}
 				return nil
 			})
@@ -86,12 +113,9 @@ func (db *Database) ReadSnapshots(start, end time.Time) ([]*chiltrix.State, erro
 		}
 		return nil
 	}); err != nil {
-		return nil, fmt.Errorf("error reading values from database: %w", err)
+		return fmt.Errorf("error reading values from database: %w", err)
 	}
-	sort.Slice(states, func(i, j int) bool {
-		return states[i].CollectionTime.AsTime().Before(states[j].CollectionTime.AsTime())
-	})
-	return states, nil
+	return nil
 }
 
 // HistorianService returns an implementation of chiltrix.Historian.
@@ -132,17 +156,24 @@ var _ chiltrix.HistorianServer = (*Service)(nil)
 
 // QueryStream returns a stream of State values based on a query.
 func (s *Service) QueryStream(req *chiltrix.QueryStreamRequest, srv chiltrix.Historian_QueryStreamServer) error {
-	states, err := s.db.ReadSnapshots(req.StartTime.AsTime(), req.GetEndTime().AsTime())
+	deliveredKeys := map[int64]bool{}
+
+	err := s.db.readSnapshotsStreaming(req.StartTime.AsTime(), req.GetEndTime().AsTime(), func(s *chiltrix.State) error {
+		key := s.GetCollectionTime().AsTime().UnixNano()
+		if deliveredKeys[key] {
+			return nil
+		}
+		deliveredKeys[key] = true
+
+		return srv.Send(&chiltrix.QueryStreamResponse{
+			State: s,
+		})
+	}, func() error {
+		return nil
+	})
+
 	if err != nil {
 		return status.Errorf(codes.Internal, "database retrieval error: %v", err)
-	}
-
-	for _, s := range states {
-		if err := srv.Send(&chiltrix.QueryStreamResponse{
-			State: s,
-		}); err != nil {
-			return err
-		}
 	}
 	return nil
 }
