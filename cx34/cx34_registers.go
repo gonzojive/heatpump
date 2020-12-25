@@ -37,6 +37,16 @@ func (s *State) SuctionTemp() units.Temperature {
 	return units.FromCelsius(float64(deciDegreesC) / 10.0)
 }
 
+// ACHeatingTargetTemp returns the active setpoint temperature.
+//
+// Currently this only returns the target AC temperature in heating mode. It
+// should be updated to return the cooling mode temperature when in cooling
+// mode.
+func (s *State) ACHeatingTargetTemp() units.Temperature {
+	degreesC := s.registerValues[TargetACHeatingModeTemp]
+	return units.FromCelsius(float64(degreesC))
+}
+
 // ACOutletWaterTemp returns the temperature at the water outlet; values are -30~97℃.
 func (s *State) ACOutletWaterTemp() units.Temperature {
 	deciDegreesC := s.registerValues[ACOutletWaterTemp]

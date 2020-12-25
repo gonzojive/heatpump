@@ -2,6 +2,7 @@
 package mdtable
 
 import (
+	"encoding/csv"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -65,6 +66,18 @@ func (b *Builder) Build() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// BuildCSV returns the table as a CSV.
+func (b *Builder) BuildCSV() string {
+	sb := &strings.Builder{}
+	w := csv.NewWriter(sb)
+
+	w.Write(b.header)
+	w.WriteAll(b.rows)
+
+	w.Flush()
+	return sb.String()
 }
 
 func (b *Builder) allRows() [][]string {
