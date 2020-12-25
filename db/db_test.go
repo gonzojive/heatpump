@@ -1,7 +1,9 @@
 package db
 
 import (
+	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -77,5 +79,34 @@ func simpleState(t time.Time, value uint32) *chiltrix.State {
 		RegisterValues: &chiltrix.RegisterSnapshot{
 			HoldingRegisterValues: map[uint32]uint32{value: value + 1000},
 		},
+	}
+}
+
+func TestDatabase_KeyOrder(t *testing.T) {
+	r := rand.New(rand.NewSource(42))
+	nextTime := func() time.Time {
+		start := time.Date(2020, time.January, 10, 0, 0, 0, 0, time.UTC)
+		extraSecs := time.Second * time.Duration(r.Int63n(1000*1000*10000)-500*1000*10000)
+		return start.Add(extraSecs)
+	}
+
+	for i := 0; i < 3000; i++ {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			a, b := nextTime(), nextTime()
+			keyA, keyB := string(keyForTime(a)), string(keyForTime(b))
+			if a.Before(b) {
+				if !(keyA < keyB) {
+					t.Errorf("%s.Before(%s) but key(a) %s < key(b) %s = false", a, b, keyA, keyB)
+				}
+			} else if b.Before(a) {
+				if !(keyB < keyA) {
+					t.Errorf("%s.Before(%s) but key(a) %s < key(b) %s = false", b, a, keyB, keyA)
+				}
+			} else {
+				if keyA != keyB {
+					t.Errorf("want %q = %q for %s and %s", keyB, keyA, a, b)
+				}
+			}
+		})
 	}
 }

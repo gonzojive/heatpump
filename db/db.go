@@ -5,14 +5,21 @@ package db
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
+	"github.com/golang/glog"
 	"github.com/golang/protobuf/proto"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	schemaVersionKey = "schema-version"
+	schemaVersion    = "v2"
 )
 
 // Database stores historical values of the heat pump's state.
@@ -28,11 +35,86 @@ func Open(dir string) (*Database, error) {
 	if err != nil {
 		return nil, fmt.Errorf("badger database open error: %w", err)
 	}
-	return &Database{bdb}, nil
+	db := &Database{bdb}
+	if err := db.updateOldVersion(); err != nil {
+		return nil, fmt.Errorf("error performing migration: %w", err)
+	}
+	return db, nil
+}
+
+func (db *Database) getSchemaVersion(txn *badger.Txn) (string, error) {
+	item, err := txn.Get([]byte(schemaVersion))
+	if err == badger.ErrKeyNotFound {
+		return "v1", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("error getting schema version: %v", err)
+	}
+	val, err := item.ValueCopy(nil)
+	if err != nil {
+		return "", err
+	}
+	return string(val), nil
+}
+
+func (db *Database) updateOldVersion() error {
+	if err := db.badgerDB.Update(func(txn *badger.Txn) error {
+		gotVersion, err := db.getSchemaVersion(txn)
+		if err != nil {
+			return err
+		}
+		if gotVersion == schemaVersion {
+			glog.Infof("schema of database is already up to date (%q)", gotVersion)
+			return nil // already up to date
+		}
+		if err := txn.Set([]byte(schemaVersionKey), []byte(schemaVersion)); err != nil {
+			return fmt.Errorf("error setting schema version to %q: %w", schemaVersion, err)
+		}
+		opts := badger.DefaultIteratorOptions
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		begin := func() {
+			it.Rewind()
+		}
+		for begin(); it.Valid(); it.Next() {
+			item := it.Item()
+			if !strings.HasPrefix(string(item.Key()), v1KeyPrefix) {
+				continue
+			}
+			err := item.Value(func(v []byte) error {
+				state := &chiltrix.State{}
+				if err := proto.Unmarshal(v, state); err != nil {
+					return err
+				}
+				if err := db.writeSnapshotInTxn(state, txn); err != nil {
+					return err
+				}
+				return txn.Delete(item.Key())
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("error reading values from database: %w", err)
+	}
+	return nil
 }
 
 // WriteSnapshot writes a snaptshot of the heatpump state to the database.
 func (db *Database) WriteSnapshot(state *chiltrix.State) error {
+	if err := db.badgerDB.Update(func(txn *badger.Txn) error {
+		return db.writeSnapshotInTxn(state, txn)
+	}); err != nil {
+		return fmt.Errorf("error writing value to database: %w", err)
+	}
+	return nil
+}
+
+// writeSnapshotInTxn writes a snaptshot of the heatpump state to the database.
+func (db *Database) writeSnapshotInTxn(state *chiltrix.State, txn *badger.Txn) error {
 	key, err := keyForState(state)
 	if err != nil {
 		return err
@@ -41,9 +123,7 @@ func (db *Database) WriteSnapshot(state *chiltrix.State) error {
 	if err != nil {
 		return err
 	}
-	if err := db.badgerDB.Update(func(txn *badger.Txn) error {
-		return txn.Set(key, value)
-	}); err != nil {
+	if err := txn.Set(key, value); err != nil {
 		return fmt.Errorf("error writing value to database: %w", err)
 	}
 	return nil
@@ -130,8 +210,22 @@ func keyForState(state *chiltrix.State) ([]byte, error) {
 	return keyForTime(state.GetCollectionTime().AsTime()), nil
 }
 
+const (
+	keyTimeLayout = "20060102T150405.999999999"
+
+	v1KeyPrefix = "time/"
+)
+
 func keyForTime(t time.Time) []byte {
-	return []byte(fmt.Sprintf("time/%d", t.UnixNano()))
+	//return []byte(fmt.Sprintf("time/%d", t.UnixNano()))
+	return []byte(fmt.Sprintf("t/%s", t.In(time.UTC).Format(keyTimeLayout)))
+	/*
+		key := make([]byte, 8+len("t/"))
+		key[0] = 't'
+		key[1] = '/'
+		binary.LittleEndian.PutUint64(key[2:], uint64(t.UnixNano()))
+		return key
+	*/
 }
 
 func sharedPrefix(a, b []byte) []byte {
@@ -156,6 +250,10 @@ var _ chiltrix.HistorianServer = (*Service)(nil)
 
 // QueryStream returns a stream of State values based on a query.
 func (s *Service) QueryStream(req *chiltrix.QueryStreamRequest, srv chiltrix.Historian_QueryStreamServer) error {
+	start := time.Now()
+	defer func() {
+		glog.Infof("QueryStream finished in %s", time.Now().Sub(start))
+	}()
 	deliveredKeys := map[int64]bool{}
 
 	err := s.db.readSnapshotsStreaming(req.StartTime.AsTime(), req.GetEndTime().AsTime(), func(s *chiltrix.State) error {
