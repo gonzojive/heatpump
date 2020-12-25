@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v2"
-	"github.com/dgraph-io/badger/v2/options"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/proto"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
@@ -29,21 +28,21 @@ type Database struct {
 
 // Open returns a databased stored in the given directory.
 func Open(dir string) (*Database, error) {
-	opts := badger.DefaultOptions(dir)
-	opts.ValueLogLoadingMode = options.FileIO
+	opts := badger.DefaultOptions(dir).WithMaxTableSize(1024 * 1024 * 8).WithValueLogFileSize(1024 * 1024 * 8)
+	//opts.ValueLogLoadingMode = options.FileIO
 	bdb, err := badger.Open(opts)
 	if err != nil {
 		return nil, fmt.Errorf("badger database open error: %w", err)
 	}
 	db := &Database{bdb}
-	if err := db.updateOldVersion(); err != nil {
+	if err := db.migrate(); err != nil {
 		return nil, fmt.Errorf("error performing migration: %w", err)
 	}
 	return db, nil
 }
 
 func (db *Database) getSchemaVersion(txn *badger.Txn) (string, error) {
-	item, err := txn.Get([]byte(schemaVersion))
+	item, err := txn.Get([]byte(schemaVersionKey))
 	if err == badger.ErrKeyNotFound {
 		return "v1", nil
 	}
@@ -57,7 +56,13 @@ func (db *Database) getSchemaVersion(txn *badger.Txn) (string, error) {
 	return string(val), nil
 }
 
-func (db *Database) updateOldVersion() error {
+func (db *Database) migrate() error {
+	updated := false
+	defer func() {
+		if updated {
+			glog.Infof("finished migration to %q", schemaVersion)
+		}
+	}()
 	if err := db.badgerDB.Update(func(txn *badger.Txn) error {
 		gotVersion, err := db.getSchemaVersion(txn)
 		if err != nil {
@@ -67,6 +72,8 @@ func (db *Database) updateOldVersion() error {
 			glog.Infof("schema of database is already up to date (%q)", gotVersion)
 			return nil // already up to date
 		}
+		updated = true
+		glog.Infof("updating schema from %q to %q", gotVersion, schemaVersion)
 		if err := txn.Set([]byte(schemaVersionKey), []byte(schemaVersion)); err != nil {
 			return fmt.Errorf("error setting schema version to %q: %w", schemaVersion, err)
 		}
@@ -77,7 +84,9 @@ func (db *Database) updateOldVersion() error {
 		begin := func() {
 			it.Rewind()
 		}
+		i := 0
 		for begin(); it.Valid(); it.Next() {
+			i++
 			item := it.Item()
 			if !strings.HasPrefix(string(item.Key()), v1KeyPrefix) {
 				continue
@@ -90,7 +99,10 @@ func (db *Database) updateOldVersion() error {
 				if err := db.writeSnapshotInTxn(state, txn); err != nil {
 					return err
 				}
-				return txn.Delete(item.Key())
+				if i%100 == 0 {
+					glog.Infof("updated %dth record from schema %q to %q", i, gotVersion, schemaVersion)
+				}
+				return txn.Delete(item.KeyCopy(nil))
 			})
 			if err != nil {
 				return err
