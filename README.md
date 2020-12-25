@@ -22,6 +22,7 @@ heat pump. The components of the system are as follows:
    then wrote the `github.com/gonzojive/heatpump/tempsensor` Go package to read
    the sensor values.
 
+![screenshot of dashboard as of 2020/12/24](https://raw.githubusercontent.com/gonzojive/heatpump/dashboard/docs/screenshot-2020-12-24.png "screenshot of dashboard as of 2020/12/24")
 
 ## Implementation notes
 
