@@ -28,7 +28,8 @@ var markdown = goldmark.New(goldmark.WithExtensions(extension.NewTable()))
 const (
 	reportInterval = time.Minute
 
-	dashboardWindow = time.Hour * 24 * 14
+	//dashboardWindow = time.Hour * 24 * 14
+	dashboardWindow = time.Hour * 1
 
 	timeLayout        = "2006-01-02T15:04:05"
 	machineTimeLayout = "2006-01-02 15:04:05.999999" // based on https://plotly.com/chart-studio-help/date-format-and-time-series/
@@ -107,6 +108,7 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 			<body>
 				<div id='copDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
 				<div id='tempDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
+				<div id='pumpDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
 				<div class="markdown-body">%s</div>
 				<script src='index.js'></script>
 			</body>
