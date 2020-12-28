@@ -25,6 +25,7 @@ var (
 	grpcPort       = flag.Int("grpc-port", 8082, "Port used to serve historical database values over GRPC.")
 	binPath        = flag.String("collector-bin", "/home/pi/go/bin/cx34collector", "Path to collector binary")
 	scriptName     = flag.String("script-name", "cx34collector.service", "Name of the systemd file to place in "+systemdDir)
+	scriptName     = flag.String("script-name", "cx34collector.service", "Name of the systemd file to place in "+systemdDir)
 )
 
 func main() {
@@ -45,6 +46,7 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	glog.Infof("using executable path %s - remember to install the latest version using go install cmd/cx34collector/*.go", executable)
 
 	scriptContents := genSystemDScript(*dbDir, dev.Path(), executable)
 	scriptPath := filepath.Join(systemdDir, *scriptName)
