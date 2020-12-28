@@ -30,6 +30,29 @@ This project is written in Go.
 
 ## Setup
 
+### Software installation
+
+Install go on the Raspberry Pi according to [the official
+instructions](https://golang.org/doc/install).
+
+Install the collector binary:
+
+```shell
+go get github.com/gonzojive/heatpump/cmd/cx34collector github.com/gonzojive/heatpump/cmd/cx34install
+```
+
+Install the systemd service so the service runs at boot.
+
+```shell
+sudo `which cx34install`
+```
+
+Inspect the logs with
+
+```shell
+journalctl -u cx34collector.service
+```
+
 ### CX34 control
 
 ## General development tips
