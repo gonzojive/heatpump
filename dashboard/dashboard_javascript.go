@@ -84,6 +84,7 @@ var mainScript = content{
 	  title: {
 		text: '°C',
 	  },
+	  ticksuffix: ' °C',
 	}
   };
 
@@ -122,9 +123,85 @@ var mainScript = content{
 	},
   ];
 
+  var layoutPump = {
+	title: 'Flow rate and pump speed over time',
+	xaxis: {
+	  autorange: true,
+	  // range: ['2015-02-17', '2017-02-16'],
+	  rangeselector: {buttons: [
+		  {
+			count: 1,
+			label: '1m',
+			step: 'month',
+			stepmode: 'backward'
+		  },
+		  {
+			count: 6,
+			label: '6m',
+			step: 'month',
+			stepmode: 'backward'
+		  },
+		  {step: 'all'}
+		]},
+	  // rangeslider: {range: ['2015-02-17', '2017-02-16']},
+	  type: 'date'
+	},
+	yaxis: {
+	  autorange: true,
+	  // range: [86.8700008333, 138.870004167],
+	  type: 'linear',
+	  title: {
+		text: 'liters/minute',
+	  },
+	  side: 'left',
+	  ticksuffix: ' l/m',
+	},
+	yaxis2: {
+	  autorange: true,
+	  // range: [-1, 11],
+	  type: 'linear',
+	  title: {
+		text: 'Pump Speed 1-10',
+	  },
+	  side: 'right',
+	  overlaying: 'y',
+	}
+  };
+
+  var pumpTraces = [
+	{
+		type: "scatter",
+		mode: "lines",
+		name: 'Flow Rate',
+		x: unpack(rows, 'Time'),
+		y: unpack(rows, 'Flow Rate'),
+		line: {color: '#17BECF'},
+		yaxis: 'y',
+	},
+	{
+		type: "scatter",
+		mode: "lines",
+		name: 'Recommended Flow Rate@full power',
+		x: unpack(rows, 'Time'),
+		y: unpack(rows, 'Flow Rate').map((x) => 20),
+		line: {color: '#000000'},
+		yaxis: 'y',
+	},
+	{
+		type: "scatter",
+		mode: "lines",
+		name: 'Pump Speed',
+		x: unpack(rows, 'Time'),
+		y: unpack(rows, 'Pump Speed'),
+		line: {color: '#7F7F7F'},
+		yaxis: 'y2',
+	},
+  ];
+
   
   Plotly.newPlot('copDiv', dataCOP, layoutCOP);
   Plotly.newPlot('tempDiv', tempTraces, layoutTemps);
+  Plotly.newPlot('pumpDiv', pumpTraces, layoutPump);
   })
   `,
 }
