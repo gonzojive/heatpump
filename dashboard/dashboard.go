@@ -29,7 +29,7 @@ const (
 	reportInterval = time.Minute
 
 	//dashboardWindow = time.Hour * 24 * 14
-	dashboardWindow = time.Hour * 1
+	dashboardWindow = time.Hour * 6
 
 	timeLayout        = "2006-01-02T15:04:05"
 	machineTimeLayout = "2006-01-02 15:04:05.999999" // based on https://plotly.com/chart-studio-help/date-format-and-time-series/
@@ -166,6 +166,7 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 	sort.Slice(states, func(i, j int) bool {
 		return states[i].Proto().GetCollectionTime().AsTime().After(states[j].Proto().CollectionTime.AsTime())
 	})
+	glog.Infof("got states: %s", cx34.DebugSequenceInfo(states))
 
 	machineReadable := wantContentType == csvContent
 
@@ -188,7 +189,7 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 				fmt.Sprintf("%.1f", s.AmbientTemp().Celsius()),
 				fmt.Sprintf("%.1f", s.FlowRate().LitersPerMinute()),
 				fmt.Sprintf("%d", s.InternalPumpSpeed()),
-				fmt.Sprintf("%.2f", s.ApparentPower().Kilowatts()),
+				fmt.Sprintf("%.4f", s.ApparentPower().Kilowatts()),
 				cop,
 			})
 		} else {
@@ -205,7 +206,7 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 				formatTemp(s.AmbientTemp()),
 				fmt.Sprintf("%.1fL/m", s.FlowRate().LitersPerMinute()),
 				s.InternalPumpSpeed().String(),
-				fmt.Sprintf("%.1fV⋅%.1fA = %.2fkVA", s.ACVoltage().Volts(), s.ACCurrent().Amperes(), s.ApparentPower().Kilowatts()),
+				fmt.Sprintf("%.1fV⋅%.1fA = %.3fkVA", s.ACVoltage().Volts(), s.ACCurrent().Amperes(), s.ApparentPower().Kilowatts()),
 				cop,
 			})
 		}

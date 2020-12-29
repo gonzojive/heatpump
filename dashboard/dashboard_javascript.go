@@ -7,6 +7,24 @@ var mainScript = content{
 	function unpack(rows, key) {
 	return rows.map(function(row) { return row[key]; });
   }
+
+  const sharedRangeSelector = {
+	buttons: [
+		{
+			count: 1,
+			label: '1h',
+			step: 'hour',
+			stepmode: 'backward'
+		},
+		{
+			count: 24,
+			label: '24h',
+			step: 'hour',
+			stepmode: 'backward'
+		},
+		{step: 'all'}
+	]
+  };
   
   
   var copTrace = {
@@ -18,38 +36,44 @@ var mainScript = content{
 	line: {color: '#17BECF'}
   }
   
-  var dataCOP = [copTrace];
+  var dataCOP = [copTrace, {
+	type: "scatter",
+	mode: "lines",
+	name: 'Power Consumption (kW)',
+	x: unpack(rows, 'Time'),
+	y: unpack(rows, 'Approx Power'),
+	line: {color: '#7F7F7F'},
+	yaxis: 'y2',
+  }];
   
   var layoutCOP = {
 	title: 'COP over time',
 	xaxis: {
 	  autorange: true,
 	  // range: ['2015-02-17', '2017-02-16'],
-	  rangeselector: {buttons: [
-		  {
-			count: 1,
-			label: '1m',
-			step: 'month',
-			stepmode: 'backward'
-		  },
-		  {
-			count: 6,
-			label: '6m',
-			step: 'month',
-			stepmode: 'backward'
-		  },
-		  {step: 'all'}
-		]},
+	  rangeselector: sharedRangeSelector,
 	  // rangeslider: {range: ['2015-02-17', '2017-02-16']},
 	  type: 'date'
 	},
 	yaxis: {
-	  autorange: true,
+	  autorange: false,
+	  range: [0, 5],
 	  // range: [86.8700008333, 138.870004167],
 	  type: 'linear',
 	  title: {
 		text: 'Coefficient of Performance',
 	  },
+	},
+	yaxis2: {
+	  autorange: false,
+	  range: [0, 4.5],
+	  type: 'linear',
+	  title: {
+		text: 'Power Consumption (kW)',
+	  },
+	  side: 'right',
+	  overlaying: 'y',
+	  ticksuffix: ' kW',
 	}
   };
 
@@ -59,21 +83,7 @@ var mainScript = content{
 	xaxis: {
 	  autorange: true,
 	  // range: ['2015-02-17', '2017-02-16'],
-	  rangeselector: {buttons: [
-		  {
-			count: 1,
-			label: '1m',
-			step: 'month',
-			stepmode: 'backward'
-		  },
-		  {
-			count: 6,
-			label: '6m',
-			step: 'month',
-			stepmode: 'backward'
-		  },
-		  {step: 'all'}
-		]},
+	  rangeselector: sharedRangeSelector,
 	  // rangeslider: {range: ['2015-02-17', '2017-02-16']},
 	  type: 'date'
 	},
@@ -128,21 +138,7 @@ var mainScript = content{
 	xaxis: {
 	  autorange: true,
 	  // range: ['2015-02-17', '2017-02-16'],
-	  rangeselector: {buttons: [
-		  {
-			count: 1,
-			label: '1m',
-			step: 'month',
-			stepmode: 'backward'
-		  },
-		  {
-			count: 6,
-			label: '6m',
-			step: 'month',
-			stepmode: 'backward'
-		  },
-		  {step: 'all'}
-		]},
+	  rangeselector: sharedRangeSelector,
 	  // rangeslider: {range: ['2015-02-17', '2017-02-16']},
 	  type: 'date'
 	},
