@@ -43,3 +43,22 @@ message QueryStreamRequest {
 message QueryStreamResponse {
     State state = 1;
 }
+
+// StateSequence captures a series of state values. They are encoded
+// differentially.
+message StateSequence {
+    // A series of StateDiff objects. The first object
+    repeated StateDiff diffs = 1;
+}
+
+// StateDiff is a difference between two states.
+message StateDiff {
+    // Collection time, always specified.
+    .google.protobuf.Timestamp collection_time = 1;
+
+    // Modbus register values.
+    RegisterSnapshot updated_values = 2;
+
+    // Registers that are not present in the new map.
+    repeated uint32 deleted_registers = 3;
+}
