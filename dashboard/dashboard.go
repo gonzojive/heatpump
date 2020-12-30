@@ -4,7 +4,6 @@ package dashboard
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -15,7 +14,6 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/gonzojive/heatpump/cx34"
 	"github.com/gonzojive/heatpump/mdtable"
@@ -28,8 +26,9 @@ var markdown = goldmark.New(goldmark.WithExtensions(extension.NewTable()))
 const (
 	reportInterval = time.Minute
 
-	//dashboardWindow = time.Hour * 24 * 14
-	dashboardWindow = time.Hour * 6
+	dashboardWindow       = time.Hour * 24 * 14
+	dashboardPointSpacing = time.Minute * 2
+	//dashboardWindow = time.Hour * 6
 
 	timeLayout        = "2006-01-02T15:04:05"
 	machineTimeLayout = "2006-01-02 15:04:05.999999" // based on https://plotly.com/chart-studio-help/date-format-and-time-series/
@@ -45,14 +44,21 @@ func Run(ctx context.Context, historianAddr string, httpPort int) error {
 	defer conn.Close()
 	c := chiltrix.NewHistorianClient(conn)
 
-	server := &server{c}
+	cache, closer, err := newCache(ctx, c)
+	if err != nil {
+		return err
+	}
+	defer closer.Close()
+
+	server := &server{c, cache}
 	server.registerHandlers()
 
 	return (&http.Server{Addr: fmt.Sprintf(":%d", httpPort)}).ListenAndServe()
 }
 
 type server struct {
-	c chiltrix.HistorianClient
+	c     chiltrix.HistorianClient
+	cache *cache
 }
 
 func (s *server) registerHandlers() {
@@ -109,6 +115,7 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 				<div id='copDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
 				<div id='tempDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
 				<div id='pumpDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
+				<div id='powerQualityDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
 				<div class="markdown-body">%s</div>
 				<script src='index.js'></script>
 			</body>
@@ -120,61 +127,81 @@ func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (s *server) queryStates(ctx context.Context, span span) ([]*cx34.State, error) {
+	states, err := s.cache.queryStates(ctx, span)
+	if err != nil {
+		return nil, err
+	}
+	var sampled []*cx34.State
+	var mostRecentSample *cx34.State
+	for i := len(states) - 1; i >= 0; i-- {
+		s := states[i]
+		if mostRecentSample == nil || mostRecentSample.CollectionTime().Sub(s.CollectionTime()) >= dashboardPointSpacing {
+			sampled = append(sampled, s)
+			mostRecentSample = s
+			continue
+		}
+
+	}
+	sort.Slice(sampled, func(i, j int) bool {
+		return sampled[i].CollectionTime().Before(sampled[j].CollectionTime())
+	})
+	return sampled, nil
+}
+
 func (s *server) dashboardContent(ctx context.Context, wantContentType contentType) (content, error) {
 	end := time.Now()
 	start := end.Add(-1 * dashboardWindow)
 
-	queryClient, err := s.c.QueryStream(ctx, &chiltrix.QueryStreamRequest{
-		StartTime: timestamppb.New(start),
-		EndTime:   timestamppb.New(end),
-	})
+	states, err := s.queryStates(ctx, span{start, end})
 	if err != nil {
 		return content{
 			text:        fmt.Sprintf("## Error\n\n```\n%s\n```\n", err.Error()),
 			contentType: markdownContent,
 		}, nil
 	}
-
-	table := (&mdtable.Builder{}).SetHeader([]string{
-		"Time", "Target Temp", "Inlet Temp", "Outlet Temp", "Ambient Temp", "Flow Rate", "Pump Speed", "Approx Power",
-		"COP",
-	})
-
-	var states []*cx34.State
-	totalBytes := 0
-	for {
-		resp, err := queryClient.Recv()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return content{
-				text:        fmt.Sprintf("## Error\n\n```\n%s\n```\n", err.Error()),
-				contentType: markdownContent,
-			}, err
-		}
-		s, err := cx34.StateFromProto(resp.GetState())
-		if err != nil {
-			return content{
-				text:        fmt.Sprintf("## Error\n\n```\n%s\n```\n", err.Error()),
-				contentType: markdownContent,
-			}, err
-		}
-
-		states = append(states, s)
-		totalBytes += proto.Size(resp)
-	}
 	sort.Slice(states, func(i, j int) bool {
-		return states[i].Proto().GetCollectionTime().AsTime().After(states[j].Proto().CollectionTime.AsTime())
+		return states[i].CollectionTime().After(states[j].CollectionTime())
 	})
-	glog.Infof("got states: %s", cx34.DebugSequenceInfo(states))
+
+	table := &mdtable.Builder{}
 
 	machineReadable := wantContentType == csvContent
+	if machineReadable {
+		table.SetHeader([]string{
+			"Time",
+			"Target Temp",
+			"Inlet Temp",
+			"Outlet Temp",
+			"Ambient Temp",
+			"Flow Rate",
+			"Pump Speed",
+			"Approx Power",
+			"Voltage",
+			"COP",
+		})
+	} else {
+		table.SetHeader([]string{
+			"Time",
+			"Target Temp",
+			"Inlet Temp",
+			"Outlet Temp",
+			"Ambient Temp",
+			"Flow Rate",
+			"Pump Speed",
+			"Approx Power",
+			"COP",
+		})
+	}
+
+	totalBytes := 0
 
 	formatTemp := func(t units.Temperature) string {
 		return fmt.Sprintf("%.1f°C (%.1f°F)", t.Celsius(), t.Fahrenheit())
 	}
 
 	for _, s := range states {
+		totalBytes += proto.Size(s.Proto())
 		if machineReadable {
 			cop := ""
 			if copFrac, ok := s.COP(); ok {
@@ -182,7 +209,7 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 			}
 
 			table.AddRow([]string{
-				s.Proto().GetCollectionTime().AsTime().Local().Format(machineTimeLayout),
+				s.CollectionTime().Local().Format(machineTimeLayout),
 				fmt.Sprintf("%.1f", s.ACHeatingTargetTemp().Celsius()),
 				fmt.Sprintf("%.1f", s.ACInletWaterTemp().Celsius()),
 				fmt.Sprintf("%.1f", s.ACOutletWaterTemp().Celsius()),
@@ -190,6 +217,7 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 				fmt.Sprintf("%.1f", s.FlowRate().LitersPerMinute()),
 				fmt.Sprintf("%d", s.InternalPumpSpeed()),
 				fmt.Sprintf("%.4f", s.ApparentPower().Kilowatts()),
+				fmt.Sprintf("%.4f", s.ACVoltage().Volts()),
 				cop,
 			})
 		} else {
@@ -199,7 +227,7 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 			}
 			cop = fmt.Sprintf("%s (%.1fkW/%.1fkW)", cop, s.UsefulHeatRate().Kilowatts(), s.ApparentPower().Kilowatts())
 			table.AddRow([]string{
-				s.Proto().GetCollectionTime().AsTime().Local().Format(timeLayout),
+				s.CollectionTime().Local().Format(timeLayout),
 				formatTemp(s.ACHeatingTargetTemp()),
 				formatTemp(s.ACInletWaterTemp()),
 				formatTemp(s.ACOutletWaterTemp()),

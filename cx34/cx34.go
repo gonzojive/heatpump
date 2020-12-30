@@ -228,6 +228,11 @@ func (s *State) Proto() *chiltrix.State {
 	return msg
 }
 
+// CollectionTime returns the collection time of the heat pump state log entry.
+func (s *State) CollectionTime() time.Time {
+	return s.collectionTime
+}
+
 // DiffStates returns a human readable description of the difference between two State values.
 func DiffStates(a, b *State) (string, map[Register]bool) {
 	diffRegs := map[Register]bool{}

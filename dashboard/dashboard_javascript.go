@@ -194,10 +194,41 @@ var mainScript = content{
 	},
   ];
 
+  var layoutPowerQuality = {
+	title: 'Voltage over time',
+	xaxis: {
+	  autorange: true,
+	  rangeselector: sharedRangeSelector,
+	  type: 'date'
+	},
+	yaxis: {
+	  autorange: true,
+	  type: 'linear',
+	  title: {
+		text: 'Line Voltage (V)',
+	  },
+	  side: 'left',
+	  ticksuffix: ' V',
+	}
+  };
+
+  var powerQualityTraces = [
+	{
+		type: "scatter",
+		mode: "lines",
+		name: 'Voltage',
+		x: unpack(rows, 'Time'),
+		y: unpack(rows, 'Voltage'),
+		line: {color: '#17BECF'},
+		yaxis: 'y',
+	}
+  ];
+
   
   Plotly.newPlot('copDiv', dataCOP, layoutCOP);
   Plotly.newPlot('tempDiv', tempTraces, layoutTemps);
   Plotly.newPlot('pumpDiv', pumpTraces, layoutPump);
+  Plotly.newPlot('powerQualityDiv', powerQualityTraces, layoutPowerQuality);
   })
   `,
 }
