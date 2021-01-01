@@ -180,7 +180,10 @@ var mainScript = content{
 		name: 'Recommended Flow Rate@full power',
 		x: unpack(rows, 'Time'),
 		y: unpack(rows, 'Flow Rate').map((x) => 20),
-		line: {color: '#000000'},
+		line: {
+			dash: 'dot',
+			color: '#000000',
+		},
 		yaxis: 'y',
 	},
 	{
@@ -189,7 +192,9 @@ var mainScript = content{
 		name: 'Pump Speed',
 		x: unpack(rows, 'Time'),
 		y: unpack(rows, 'Pump Speed'),
-		line: {color: '#7F7F7F'},
+		line: {
+		  color: '#7F7F7F'
+		},
 		yaxis: 'y2',
 	},
   ];

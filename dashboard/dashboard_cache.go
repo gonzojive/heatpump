@@ -95,7 +95,7 @@ func (c *cache) doSingleSpanRefresh(ctx context.Context, s span) error {
 
 	glog.Infof("querying waterpi for %s worth of state (%s-%s)", s.end.Sub(s.start), s.start, s.end)
 	queryClient, err := c.client.QueryStream(ctx, &chiltrix.QueryStreamRequest{
-		StartTime: timestamppb.New(s.start),
+		StartTime: timestamppb.New(s.start.Add(time.Second * -10)), // buffer to make up for race condition writing to database vs querying database (this call)
 		EndTime:   timestamppb.New(s.end),
 	})
 	if err != nil {

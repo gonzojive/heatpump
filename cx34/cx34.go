@@ -233,6 +233,11 @@ func (s *State) CollectionTime() time.Time {
 	return s.collectionTime
 }
 
+// RegisterValues returns a map of register values. The map should not be modified by the caller.
+func (s *State) RegisterValues() map[Register]uint16 {
+	return s.registerValues
+}
+
 // DiffStates returns a human readable description of the difference between two State values.
 func DiffStates(a, b *State) (string, map[Register]bool) {
 	diffRegs := map[Register]bool{}
