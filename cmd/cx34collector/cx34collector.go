@@ -100,6 +100,7 @@ func run(ctx context.Context) error {
 		}
 		s := grpc.NewServer()
 		chiltrix.RegisterHistorianServer(s, db.HistorianService())
+		chiltrix.RegisterReadWriteServiceServer(s, cxClient)
 		if err := s.Serve(lis); err != nil {
 			return fmt.Errorf("failed to serve: %w", err)
 		}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -69,6 +70,25 @@ func (s *server) registerHandlers() {
 	http.HandleFunc("/", s.handleReport)
 
 	http.Handle("/index.js", staticHandler(mainScript))
+}
+
+func (s *server) handleSetTemp(w http.ResponseWriter, r *http.Request) {
+	writeErr := func(err error) {
+		w.Header().Set("Content-Type", textContent.headerValue())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "error: %v", err)
+	}
+	u, err := url.Parse(r.RequestURI)
+	if err != nil {
+		writeErr(err)
+		return
+	}
+	t, err := strconv.ParseFloat(u.Query().Get("target-heat"), 64)
+	if err != nil {
+		writeErr(err)
+		return
+	}
+	fmt.Fprintf(w, "set temp to %f", units.FromCelsius(t).Celsius())
 }
 
 func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
@@ -409,6 +429,7 @@ type content struct {
 type contentType string
 
 const (
+	textContent       contentType = "text/plain; charset=UTF-8"
 	htmlContent       contentType = "text/html; charset=UTF-8"
 	markdownContent   contentType = "text/markdown; charset=UTF-8"
 	javascriptContent contentType = "text/javascript; charset=UTF-8"

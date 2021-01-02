@@ -127,3 +127,91 @@ var Historian_ServiceDesc = grpc.ServiceDesc{
 	},
 	Metadata: "chiltrix.proto",
 }
+
+// ReadWriteServiceClient is the client API for ReadWriteService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ReadWriteServiceClient interface {
+	// Change a parameter.
+	SetParameter(ctx context.Context, in *SetParameterRequest, opts ...grpc.CallOption) (*SetParameterResponse, error)
+}
+
+type readWriteServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewReadWriteServiceClient(cc grpc.ClientConnInterface) ReadWriteServiceClient {
+	return &readWriteServiceClient{cc}
+}
+
+func (c *readWriteServiceClient) SetParameter(ctx context.Context, in *SetParameterRequest, opts ...grpc.CallOption) (*SetParameterResponse, error) {
+	out := new(SetParameterResponse)
+	err := c.cc.Invoke(ctx, "/chiltrix.ReadWriteService/SetParameter", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ReadWriteServiceServer is the server API for ReadWriteService service.
+// All implementations must embed UnimplementedReadWriteServiceServer
+// for forward compatibility
+type ReadWriteServiceServer interface {
+	// Change a parameter.
+	SetParameter(context.Context, *SetParameterRequest) (*SetParameterResponse, error)
+	mustEmbedUnimplementedReadWriteServiceServer()
+}
+
+// UnimplementedReadWriteServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedReadWriteServiceServer struct {
+}
+
+func (UnimplementedReadWriteServiceServer) SetParameter(context.Context, *SetParameterRequest) (*SetParameterResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetParameter not implemented")
+}
+func (UnimplementedReadWriteServiceServer) mustEmbedUnimplementedReadWriteServiceServer() {}
+
+// UnsafeReadWriteServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ReadWriteServiceServer will
+// result in compilation errors.
+type UnsafeReadWriteServiceServer interface {
+	mustEmbedUnimplementedReadWriteServiceServer()
+}
+
+func RegisterReadWriteServiceServer(s grpc.ServiceRegistrar, srv ReadWriteServiceServer) {
+	s.RegisterService(&ReadWriteService_ServiceDesc, srv)
+}
+
+func _ReadWriteService_SetParameter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetParameterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReadWriteServiceServer).SetParameter(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/chiltrix.ReadWriteService/SetParameter",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReadWriteServiceServer).SetParameter(ctx, req.(*SetParameterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ReadWriteService_ServiceDesc is the grpc.ServiceDesc for ReadWriteService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ReadWriteService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "chiltrix.ReadWriteService",
+	HandlerType: (*ReadWriteServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SetParameter",
+			Handler:    _ReadWriteService_SetParameter_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "chiltrix.proto",
+}

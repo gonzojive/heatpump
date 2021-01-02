@@ -2,6 +2,7 @@
 package cx34
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -14,8 +15,11 @@ import (
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/mdtable"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
+	"github.com/gonzojive/heatpump/units"
 	"github.com/howeyc/crc16"
 	"go.uber.org/multierr"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -136,6 +140,35 @@ func (c *Client) ReadState() (*State, error) {
 		}
 	}
 	return &State{time.Now(), m}, nil
+}
+
+// SetParameter sets the target heating temperature for the CX34.
+func (c *Client) SetParameter(ctx context.Context, req *chiltrix.SetParameterRequest) (*chiltrix.SetParameterResponse, error) {
+	if req.GetTargetHeatingModeTemperature() != nil {
+		if err := c.setHeatingTemp(units.FromCelsius(req.GetTargetHeatingModeTemperature().GetDegreesCelcius())); err != nil {
+			return nil, grpc.Errorf(codes.Internal, "error setting temperature: %v", err)
+		}
+	}
+	return &chiltrix.SetParameterResponse{}, nil
+}
+
+// setHeatingTemp sets the target heating temperature for the CX34.
+func (c *Client) setHeatingTemp(t units.Temperature) error {
+	deg := t.Celsius()
+	if deg < 5 || deg > 70 {
+		return fmt.Errorf("temperature is out of range: %v", t)
+	}
+	tenths := uint16(math.Round(t.Celsius() * 10))
+	//tenthsBytes := uint16ToBytes(tenths)
+
+	glog.Infof("would call c.c.WriteSingleRegister(%d, %d)", TargetACHeatingModeTemp.uint16(), tenths)
+
+	return nil
+	res, err := c.c.WriteSingleRegister(TargetACHeatingModeTemp.uint16(), tenths)
+	if err != nil {
+		return fmt.Errorf("WriteSingleRegister error: %w (returned bytes %v)", err, res)
+	}
+	return nil
 }
 
 // CheckConnection attempts to connect to the heat pump and returns an error if the connection fails.
@@ -324,3 +357,7 @@ func decodeFrame(adu []byte) (*modbus.ProtocolDataUnit, error) {
 		Data:         adu[2 : length-2],
 	}, nil
 }
+
+// func uint16ToBytes(i uint16) []byte {
+// 	return []byte{(i & 0xFF00) >> 8, i & 0x00FF)}
+// }
