@@ -62,6 +62,7 @@ type Params struct {
 
 // Client is used to communicate with the Chiltrix CX34 heat pump.
 type Client struct {
+	chiltrix.ReadWriteServiceServer
 	c modbus.Client
 }
 
@@ -106,7 +107,7 @@ func Connect(p *Params) (*Client, error) {
 	}
 
 	client := modbus.NewClient(handler)
-	c := &Client{client}
+	c := &Client{c: client}
 
 	if err := c.CheckConnection(); err != nil {
 		return nil, err
@@ -158,16 +159,14 @@ func (c *Client) setHeatingTemp(t units.Temperature) error {
 	if deg < 5 || deg > 70 {
 		return fmt.Errorf("temperature is out of range: %v", t)
 	}
-	tenths := uint16(math.Round(t.Celsius() * 10))
-	//tenthsBytes := uint16ToBytes(tenths)
+	registerValue := uint16(math.Round(t.Celsius()))
 
-	glog.Infof("would call c.c.WriteSingleRegister(%d, %d)", TargetACHeatingModeTemp.uint16(), tenths)
-
-	return nil
-	res, err := c.c.WriteSingleRegister(TargetACHeatingModeTemp.uint16(), tenths)
+	//return nil
+	res, err := c.c.WriteSingleRegister(TargetACHeatingModeTemp.uint16(), registerValue)
 	if err != nil {
 		return fmt.Errorf("WriteSingleRegister error: %w (returned bytes %v)", err, res)
 	}
+	glog.Infof("set target heating temperature to %.0f°C/%.0f°F", t.Celsius(), t.Fahrenheit())
 	return nil
 }
 
