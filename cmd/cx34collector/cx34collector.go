@@ -26,6 +26,7 @@ var (
 	rs484TTYModbus = flag.String("modbus-device", "/dev/ttyUSB0", "Path to USB-to-RS485 device connected to modbus.")
 	dbDir          = flag.String("db-dir", "/home/pi/db/cx34db", "Path to a directory where badger database should be stored.")
 	grpcPort       = flag.Int("grpc-port", 8082, "Port used to serve historical database values over GRPC.")
+	versionFlag    = flag.Bool("version", false, "Return the version of the program.")
 
 	markdown = goldmark.New(goldmark.WithExtensions(extension.NewTable()))
 )
@@ -33,10 +34,16 @@ var (
 const (
 	reportInterval   = time.Minute
 	snapshotInterval = time.Second * 5
+
+	version = "v0.0.1a"
 )
 
 func main() {
 	flag.Parse()
+	if *versionFlag {
+		fmt.Printf("%s\n", version)
+		return
+	}
 	if err := run(context.Background()); err != nil {
 		glog.Exitf("%v", err)
 	}
