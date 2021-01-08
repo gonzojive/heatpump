@@ -35,7 +35,7 @@ const (
 	reportInterval   = time.Minute
 	snapshotInterval = time.Second * 5
 
-	version = "v0.0.1a"
+	version = "v0.0.1b"
 )
 
 func main() {
@@ -50,6 +50,7 @@ func main() {
 }
 
 func run(ctx context.Context) error {
+	glog.Infof("starting cx34collector version %s", version)
 	db, err := db.Open(*dbDir)
 	if err != nil {
 		return err

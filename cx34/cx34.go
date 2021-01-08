@@ -150,6 +150,17 @@ func (c *Client) SetParameter(ctx context.Context, req *chiltrix.SetParameterReq
 			return nil, grpc.Errorf(codes.Internal, "error setting temperature: %v", err)
 		}
 	}
+	if req.GetRegisterValue() != nil {
+		if v := req.GetRegisterValue().GetRegister(); v > math.MaxUint16 {
+			return nil, grpc.Errorf(codes.InvalidArgument, "invalid register %d is out of range", v)
+		}
+		if v := req.GetRegisterValue().GetValue(); v > math.MaxUint16 {
+			return nil, grpc.Errorf(codes.InvalidArgument, "invalid register value %d is out of range", v)
+		}
+		if err := c.setRegisterValue(uint16(req.RegisterValue.GetRegister()), uint16(req.RegisterValue.GetValue())); err != nil {
+			return nil, grpc.Errorf(codes.Internal, "error setting register: %v", err)
+		}
+	}
 	return &chiltrix.SetParameterResponse{}, nil
 }
 
@@ -161,12 +172,20 @@ func (c *Client) setHeatingTemp(t units.Temperature) error {
 	}
 	registerValue := uint16(math.Round(t.Celsius()))
 
-	//return nil
 	res, err := c.c.WriteSingleRegister(TargetACHeatingModeTemp.uint16(), registerValue)
 	if err != nil {
 		return fmt.Errorf("WriteSingleRegister error: %w (returned bytes %v)", err, res)
 	}
 	glog.Infof("set target heating temperature to %.0f°C/%.0f°F", t.Celsius(), t.Fahrenheit())
+	return nil
+}
+
+func (c *Client) setRegisterValue(reg, value uint16) error {
+	res, err := c.c.WriteSingleRegister(reg, value)
+	if err != nil {
+		return fmt.Errorf("WriteSingleRegister error: %w (returned bytes %v)", err, res)
+	}
+	glog.Infof("set register value %d to %d; got response %v", reg, value, res)
 	return nil
 }
 

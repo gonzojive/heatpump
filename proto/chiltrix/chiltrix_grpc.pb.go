@@ -30,7 +30,7 @@ func NewHistorianClient(cc grpc.ClientConnInterface) HistorianClient {
 }
 
 func (c *historianClient) QueryStream(ctx context.Context, in *QueryStreamRequest, opts ...grpc.CallOption) (Historian_QueryStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Historian_ServiceDesc.Streams[0], "/chiltrix.Historian/QueryStream", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Historian_serviceDesc.Streams[0], "/chiltrix.Historian/QueryStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ type UnsafeHistorianServer interface {
 }
 
 func RegisterHistorianServer(s grpc.ServiceRegistrar, srv HistorianServer) {
-	s.RegisterService(&Historian_ServiceDesc, srv)
+	s.RegisterService(&_Historian_serviceDesc, srv)
 }
 
 func _Historian_QueryStream_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -111,10 +111,7 @@ func (x *historianQueryStreamServer) Send(m *QueryStreamResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-// Historian_ServiceDesc is the grpc.ServiceDesc for Historian service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var Historian_ServiceDesc = grpc.ServiceDesc{
+var _Historian_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "chiltrix.Historian",
 	HandlerType: (*HistorianServer)(nil),
 	Methods:     []grpc.MethodDesc{},
@@ -179,7 +176,7 @@ type UnsafeReadWriteServiceServer interface {
 }
 
 func RegisterReadWriteServiceServer(s grpc.ServiceRegistrar, srv ReadWriteServiceServer) {
-	s.RegisterService(&ReadWriteService_ServiceDesc, srv)
+	s.RegisterService(&_ReadWriteService_serviceDesc, srv)
 }
 
 func _ReadWriteService_SetParameter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -200,10 +197,7 @@ func _ReadWriteService_SetParameter_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-// ReadWriteService_ServiceDesc is the grpc.ServiceDesc for ReadWriteService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var ReadWriteService_ServiceDesc = grpc.ServiceDesc{
+var _ReadWriteService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "chiltrix.ReadWriteService",
 	HandlerType: (*ReadWriteServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
