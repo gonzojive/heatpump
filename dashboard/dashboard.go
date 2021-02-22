@@ -28,7 +28,7 @@ var markdown = goldmark.New(goldmark.WithExtensions(extension.NewTable()))
 const (
 	reportInterval = time.Minute
 
-	dashboardWindow              = time.Hour * 24 * 60
+	defaultDashboardWindow       = time.Hour * 24 * 7
 	dashboardPointSpacingDefault = time.Minute * 5
 	registerChangeSampleCount    = 5
 	//dashboardWindow = time.Hour * 6
@@ -38,7 +38,7 @@ const (
 )
 
 // Run runs a dashboard that displays information about the heat pump.
-func Run(ctx context.Context, historianAddr string, httpPort int) error {
+func Run(ctx context.Context, historianAddr string, httpPort int, dashboardwindow time.Duration) error {
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(historianAddr, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
@@ -46,6 +46,7 @@ func Run(ctx context.Context, historianAddr string, httpPort int) error {
 	}
 	defer conn.Close()
 	c := chiltrix.NewHistorianClient(conn)
+	rwClient := chiltrix.NewReadWriteServiceClient(conn)
 
 	cache, closer, err := newCache(ctx, c)
 	if err != nil {
@@ -53,23 +54,47 @@ func Run(ctx context.Context, historianAddr string, httpPort int) error {
 	}
 	defer closer.Close()
 
-	server := &server{c, cache}
+	server := &server{c, rwClient, cache, dashboardwindow}
 	server.registerHandlers()
 
 	return (&http.Server{Addr: fmt.Sprintf(":%d", httpPort)}).ListenAndServe()
 }
 
 type server struct {
-	c     chiltrix.HistorianClient
-	cache *cache
+	c               chiltrix.HistorianClient
+	rwClient        chiltrix.ReadWriteServiceClient
+	cache           *cache
+	dashboardWindow time.Duration
 }
 
 func (s *server) registerHandlers() {
 	http.HandleFunc("/index.md", s.handleReport)
 	http.HandleFunc("/index.csv", s.handleReport)
 	http.HandleFunc("/", s.handleReport)
+	http.HandleFunc("/set-temp", s.handleSetTemp)
+	http.HandleFunc("/clear", s.handleClearFault)
 
 	http.Handle("/index.js", staticHandler(mainScript))
+}
+
+// handleClearFault doesn't work and should be removed.
+func (s *server) handleClearFault(w http.ResponseWriter, r *http.Request) {
+	writeErr := func(err error) {
+		w.Header().Set("Content-Type", textContent.headerValue())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "error: %v", err)
+	}
+	w.Header().Set("Content-Type", textContent.headerValue())
+	if _, err := s.rwClient.SetParameter(r.Context(), &chiltrix.SetParameterRequest{
+		RegisterValue: &chiltrix.RegisterValue{
+			Register: 284, // fault code register
+			Value:    0,   // reset value?
+		},
+	}); err != nil {
+		writeErr(err)
+		return
+	}
+	fmt.Fprintf(w, "reset fault code")
 }
 
 func (s *server) handleSetTemp(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +113,17 @@ func (s *server) handleSetTemp(w http.ResponseWriter, r *http.Request) {
 		writeErr(err)
 		return
 	}
-	fmt.Fprintf(w, "set temp to %f", units.FromCelsius(t).Celsius())
+	w.Header().Set("Content-Type", textContent.headerValue())
+	if _, err := s.rwClient.SetParameter(r.Context(), &chiltrix.SetParameterRequest{
+		TargetHeatingModeTemperature: &chiltrix.Temperature{
+			DegreesCelcius: units.FromCelsius(t).Celsius(),
+		},
+	}); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "set temp to %fC failed: %v", units.FromCelsius(t).Celsius(), err)
+		return
+	}
+	fmt.Fprintf(w, "set temp to %fC", units.FromCelsius(t).Celsius())
 }
 
 func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
@@ -174,7 +209,7 @@ func (s *server) queryStates(ctx context.Context, span span) ([]*cx34.State, err
 
 func (s *server) dashboardContent(ctx context.Context, wantContentType contentType) (content, error) {
 	end := time.Now()
-	start := end.Add(-1 * dashboardWindow)
+	start := end.Add(-1 * s.dashboardWindow)
 
 	states, err := s.queryStates(ctx, span{start, end})
 	if err != nil {

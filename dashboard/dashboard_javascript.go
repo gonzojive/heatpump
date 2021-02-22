@@ -176,8 +176,17 @@ var mainScript = content{
 	},
 	{
 		type: "scatter",
+		mode: "markers",
+		name: 'Flow Rate@max pump power',
+		x: unpack(rows, 'Time'),
+		y: rows.map(rec => (rec['Pump Speed'] == 10 ? rec['Flow Rate'] : null)),
+		line: {color: '#e69900'},
+		yaxis: 'y',
+	},
+	{
+		type: "scatter",
 		mode: "lines",
-		name: 'Recommended Flow Rate@full power',
+		name: 'Recommended Flow Rate@max pump power',
 		x: unpack(rows, 'Time'),
 		y: unpack(rows, 'Flow Rate').map((x) => 20),
 		line: {
