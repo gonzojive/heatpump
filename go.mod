@@ -4,10 +4,10 @@ go 1.14
 
 //replace github.com/goburrow/serial => /home/pi/code/serial
 
-//replace github.com/goburrow/modbus => /home/pi/code/modbus
+// replace github.com/goburrow/modbus => /home/pi/code/modbus
 
 require (
-	github.com/dgraph-io/badger/v2 v2.0.3
+	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/goburrow/modbus v0.1.0
 	github.com/goburrow/serial v0.1.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b

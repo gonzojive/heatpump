@@ -4,11 +4,12 @@ package db
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/dgraph-io/badger/v2"
+	"github.com/dgraph-io/badger/v3"
 	"github.com/golang/glog"
 	"github.com/golang/protobuf/proto"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
@@ -28,7 +29,12 @@ type Database struct {
 
 // Open returns a databased stored in the given directory.
 func Open(dir string) (*Database, error) {
-	opts := badger.DefaultOptions(dir).WithMaxTableSize(1024 * 1024 * 8).WithValueLogFileSize(1024 * 1024 * 8)
+	opts := badger.DefaultOptions(dir).
+		WithBaseTableSize(1024 * 1024 * 8).
+		WithValueLogFileSize(1024 * 1024 * 8).
+		WithIndexCacheSize(1024 * 1024 * 11).
+		WithBlockSize(1024 * 1024 * 10)
+
 	//opts.ValueLogLoadingMode = options.FileIO
 	bdb, err := badger.Open(opts)
 	if err != nil {
@@ -39,6 +45,18 @@ func Open(dir string) (*Database, error) {
 		return nil, fmt.Errorf("error performing migration: %w", err)
 	}
 	return db, nil
+}
+
+func (db *Database) RestoreBackup(badgerBackupFilePath string) error {
+	f, err := os.Open(badgerBackupFilePath)
+	if err != nil {
+		return fmt.Errorf("error reading backup file: %w", err)
+	}
+	defer f.Close()
+	if err := db.badgerDB.Load(f, 10); err != nil {
+		return fmt.Errorf("badger Load failed: %w", err)
+	}
+	return nil
 }
 
 func (db *Database) getSchemaVersion(txn *badger.Txn) (string, error) {
