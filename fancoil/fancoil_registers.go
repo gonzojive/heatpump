@@ -25,28 +25,51 @@ func (r Register) String() string {
 }
 
 func parseRegisterValues(values map[Register]uint16) (*pb.State, error) {
-	out := &pb.State{}
+	out := &pb.State{
+		ModbusAddress: uint32(values[Register(pb.RegisterName_REGISTER_NAME_UNIT_ADDRESS)]),
+	}
 
-	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_ROOM_TEMPERATURE)]; ok {
-		t, err := parseTemp(val)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse room temperature value %v: %w", val, err)
+	// Temperature values
+	for _, spec := range []struct {
+		reg Register
+		dst **pb.Temperature
+	}{
+		{
+			Register(pb.RegisterName_REGISTER_NAME_ROOM_TEMPERATURE),
+			&out.RoomTemperature,
+		},
+		{
+			Register(pb.RegisterName_REGISTER_NAME_COIL_TEMPERATURE),
+			&out.CoilTemperature,
+		},
+		{
+			Register(pb.RegisterName_REGISTER_NAME_HEATING_SET_TEMPERATURE),
+			&out.HeatingTargetTemperature,
+		},
+		{
+			Register(pb.RegisterName_REGISTER_NAME_COOLING_SET_TEMPERATURE),
+			&out.CoolingTargetTemperature,
+		},
+		{
+			Register(pb.RegisterName_REGISTER_NAME_ANTI_COOLING_WIND_SETTING_TEMPERATURE),
+			&out.AntiCoolingTargetTemperature,
+		},
+		{
+			Register(pb.RegisterName_REGISTER_NAME_COOLING_SET_TEMPERATURE_AUTO),
+			&out.AutoModeCoolingTargetTemperature,
+		},
+		{
+			Register(pb.RegisterName_REGISTER_NAME_HEATING_SET_TEMPERATURE_AUTO),
+			&out.AutoModeHeatingTargetTemperature,
+		},
+	} {
+		if val, ok := values[spec.reg]; ok {
+			t, err := parseTemp(val)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse %s value %v: %w", spec.reg, val, err)
+			}
+			*spec.dst = t
 		}
-		out.RoomTemperature = t
-	}
-	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_COIL_TEMPERATURE)]; ok {
-		t, err := parseTemp(val)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse coil temperature value %v: %w", val, err)
-		}
-		out.CoilTemperature = t
-	}
-	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_HEATING_SET_TEMPERATURE)]; ok {
-		t, err := parseTemp(val)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse coil temperature value %v: %w", val, err)
-		}
-		out.HeatingSetTemperature = t
 	}
 
 	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_CURRENT_FAN_SPEED)]; ok {
@@ -62,6 +85,27 @@ func parseRegisterValues(values map[Register]uint16) (*pb.State, error) {
 			return nil, fmt.Errorf("failed to parse current fan speed value %v: %w", val, err)
 		}
 		out.PreferenceFanSetting = fs
+	}
+	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_USE_FLOOR_HEATING)]; ok {
+		enumVal, err := parseFloorHeatingMode(val)
+		if err != nil {
+			return nil, err
+		}
+		out.FloorHeatingMode = enumVal
+	}
+	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_USE_FAHRENHEIT)]; ok {
+		enumVal, err := parseTempDisplayUnit(val)
+		if err != nil {
+			return nil, err
+		}
+		out.DisplayTemperatureUnits = enumVal
+	}
+	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_VALVE_ON_OFF)]; ok {
+		enumVal, err := parseValveState(val)
+		if err != nil {
+			return nil, err
+		}
+		out.ValveState = enumVal
 	}
 	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_FAN_RPM)]; ok {
 		out.FanSpeed = &pb.FanSpeed{Rpm: int64(val)}
@@ -96,5 +140,38 @@ func parseFanSetting(value uint16) (pb.FanSetting, error) {
 			return pb.FanSetting(value), nil
 		}
 		return pb.FanSetting(value), fmt.Errorf("unknown fan setting value %v", value)
+	}
+}
+
+func parseTempDisplayUnit(value uint16) (pb.TemperatureUnits, error) {
+	switch value {
+	case 0:
+		return pb.TemperatureUnits_TEMPERATURE_UNITS_CELCIUS, nil
+	case 1:
+		return pb.TemperatureUnits_TEMPERATURE_UNITS_FAHRENHEIT, nil
+	default:
+		return pb.TemperatureUnits_TEMPERATURE_UNITS_UNSPECIFIED, fmt.Errorf("invalid temperature unit value %d", value)
+	}
+}
+
+func parseFloorHeatingMode(value uint16) (pb.FloorHeatingMode, error) {
+	switch value {
+	case 0:
+		return pb.FloorHeatingMode_FLOOR_HEATING_MODE_OFF, nil
+	case 1:
+		return pb.FloorHeatingMode_FLOOR_HEATING_MODE_ON, nil
+	default:
+		return pb.FloorHeatingMode_FLOOR_HEATING_MODE_UNSPECIFIED, fmt.Errorf("invalid floor heating mode value %d", value)
+	}
+}
+
+func parseValveState(value uint16) (pb.ValveState, error) {
+	switch value {
+	case 0:
+		return pb.ValveState_VALVE_STATE_OFF, nil
+	case 1:
+		return pb.ValveState_VALVE_STATE_ON, nil
+	default:
+		return pb.ValveState_VALVE_STATE_UNSPECIFIED, fmt.Errorf("invalid floor heating mode value %d", value)
 	}
 }

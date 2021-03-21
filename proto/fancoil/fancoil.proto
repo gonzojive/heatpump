@@ -48,7 +48,45 @@ message State {
     FanSetting current_fan_setting = 7;
     FanSpeed fan_speed = 8;
 
-    Temperature heating_set_temperature = 9;
+    // Setpoint for heating mode.
+    Temperature heating_target_temperature = 9;
+    
+    // Setpoint for heating mode.
+    Temperature cooling_target_temperature = 10;
+
+    Temperature anti_cooling_target_temperature = 11;
+    Temperature auto_mode_heating_target_temperature = 12;
+    Temperature auto_mode_cooling_target_temperature = 13;
+
+    // User configurable display teperature units.
+    TemperatureUnits display_temperature_units = 14;
+    
+    // Whether to use floor heating.
+    FloorHeatingMode floor_heating_mode = 15;
+
+    // Modbus addres of the fan coil unit. 0-99.
+    uint32 modbus_address = 16;
+
+    // Whether the electromechanical bypass valve is active or not.
+    ValveState valve_state = 17;
+}
+
+enum TemperatureUnits {
+    TEMPERATURE_UNITS_UNSPECIFIED = 0;
+    TEMPERATURE_UNITS_CELCIUS = 1;
+    TEMPERATURE_UNITS_FAHRENHEIT = 2;
+}
+
+enum FloorHeatingMode {
+    FLOOR_HEATING_MODE_UNSPECIFIED = 0;
+    FLOOR_HEATING_MODE_ON = 1;
+    FLOOR_HEATING_MODE_OFF = 2;
+}
+
+enum ValveState {
+    VALVE_STATE_UNSPECIFIED = 0;
+    VALVE_STATE_ON = 1;
+    VALVE_STATE_OFF = 2;
 }
 
 // RegisterName is an enum of all the known registers of the fan coil units.
