@@ -47,6 +47,8 @@ message State {
     FanSetting preference_fan_setting = 6;
     FanSetting current_fan_setting = 7;
     FanSpeed fan_speed = 8;
+
+    Temperature heating_set_temperature = 9;
 }
 
 // RegisterName is an enum of all the known registers of the fan coil units.

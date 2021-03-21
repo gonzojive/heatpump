@@ -41,6 +41,14 @@ func parseRegisterValues(values map[Register]uint16) (*pb.State, error) {
 		}
 		out.CoilTemperature = t
 	}
+	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_HEATING_SET_TEMPERATURE)]; ok {
+		t, err := parseTemp(val)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse coil temperature value %v: %w", val, err)
+		}
+		out.HeatingSetTemperature = t
+	}
+
 	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_CURRENT_FAN_SPEED)]; ok {
 		fs, err := parseFanSetting(val)
 		if err != nil {
@@ -54,6 +62,9 @@ func parseRegisterValues(values map[Register]uint16) (*pb.State, error) {
 			return nil, fmt.Errorf("failed to parse current fan speed value %v: %w", val, err)
 		}
 		out.PreferenceFanSetting = fs
+	}
+	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_FAN_RPM)]; ok {
+		out.FanSpeed = &pb.FanSpeed{Rpm: int64(val)}
 	}
 
 	return out, nil
