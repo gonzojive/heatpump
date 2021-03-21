@@ -27,6 +27,7 @@ import (
 	"github.com/gonzojive/heatpump/proto/chiltrix"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/protobuf/encoding/prototext"
 
 	pb "github.com/gonzojive/heatpump/proto/fancoil"
 )
@@ -142,8 +143,8 @@ func (c *Client) readRawState() (*State, error) {
 	return StateFromSnapshotProto(time.Now(), rawProto)
 }
 
-func (c *Client) setRegisterValue(reg, value uint16) error {
-	res, err := c.c.WriteSingleRegister(reg, value)
+func (c *Client) setRegisterValue(reg Register, value uint16) error {
+	res, err := c.c.WriteSingleRegister(reg.uint16(), value)
 	if err != nil {
 		return fmt.Errorf("WriteSingleRegister error: %w (returned bytes %v)", err, res)
 	}
@@ -210,7 +211,7 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 	if parsed, err := parseRegisterValues(s.registerValues); err != nil {
 		parsedStr = fmt.Sprintf("error parsing register values: %v", err)
 	} else {
-		parsedStr = fmt.Sprintf("State proto: %s", parsed)
+		parsedStr = fmt.Sprintf("State proto: %s", prototext.Format(parsed))
 	}
 	return fmt.Sprintf("%s\n\n%s", b.Build(), parsedStr)
 }
