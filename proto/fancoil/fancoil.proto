@@ -79,6 +79,7 @@ message SetStateRequest {
     // address formatted as a 10-base integer.
     string fancoil_name = 1;
 
+    PowerStatus power_status = 2;
     FanSetting preference_fan_setting = 6;
 }
 

@@ -206,3 +206,16 @@ func parsePowerStatus(value uint16) (pb.PowerStatus, error) {
 		return pb.PowerStatus_POWER_STATUS_UNSPECIFIED, fmt.Errorf("invalid floor heating mode value %d", value)
 	}
 }
+
+func powerStatusToModbusValue(v pb.PowerStatus) (uint16, error) {
+	switch v {
+	case pb.PowerStatus_POWER_STATUS_UNSPECIFIED:
+		return 0, fmt.Errorf("no modbus value for %s", v)
+	case pb.PowerStatus_POWER_STATUS_OFF:
+		return 0, nil
+	case pb.PowerStatus_POWER_STATUS_ON:
+		return 1, nil
+	default:
+		return 0, fmt.Errorf("unsupported power status value %s", v)
+	}
+}

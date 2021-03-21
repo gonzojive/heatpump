@@ -15,6 +15,7 @@ package fancoil
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"sort"
@@ -144,12 +145,20 @@ func (c *Client) readRawState() (*State, error) {
 }
 
 func (c *Client) setRegisterValue(reg Register, value uint16) error {
-	res, err := c.c.WriteSingleRegister(reg.uint16(), value)
+	// The fancoil doesn't support the WriteSingleRegister function.
+	res, err := c.c.WriteMultipleRegisters(reg.uint16(), 1, uint16ToBytes(value))
+
 	if err != nil {
 		return fmt.Errorf("WriteSingleRegister error: %w (returned bytes %v)", err, res)
 	}
-	glog.Infof("set register value %d to %d; got response %v", reg, value, res)
+	glog.Infof("set fancoil register value %d to %d; got response %v", reg, value, res)
 	return nil
+}
+
+func uint16ToBytes(value uint16) []byte {
+	out := make([]byte, 2)
+	binary.BigEndian.PutUint16(out, value)
+	return out
 }
 
 // CheckConnection attempts to connect to the heat pump and returns an error if the connection fails.
