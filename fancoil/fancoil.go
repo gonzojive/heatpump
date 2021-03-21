@@ -17,15 +17,18 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"math"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/goburrow/modbus"
 	"github.com/goburrow/serial"
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/mdtable"
-	"github.com/gonzojive/heatpump/proto/chiltrix"
+	"github.com/gonzojive/heatpump/util/lockutil"
+	"github.com/gonzojive/heatpump/util/modbusutil"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/encoding/prototext"
@@ -43,6 +46,11 @@ const (
 	slaveID  = 15
 )
 
+const (
+	// If commands aren't spaced apart enough in time, the fan coil struggles.
+	modbusCommandSpacing = time.Millisecond * 100
+)
+
 // Mode indicates the protocol that should be used to communicate with the CX34.
 type Mode string
 
@@ -55,10 +63,8 @@ type Params struct {
 
 // Client is used to communicate with the Chiltrix CX34 heat pump.
 type Client struct {
-	chiltrix.ReadWriteServiceServer
-	c modbus.Client
-	// done should be closed when Client.Close() is called.
-	done chan struct{}
+	c               modbus.Client
+	modbusRTUCloser io.Closer
 }
 
 // Connect connects a new client to the heat pump or returns an error.
@@ -87,9 +93,13 @@ func Connect(ctx context.Context, p *Params) (*Client, error) {
 	}
 
 	client := modbus.NewClient(handler)
-	c := &Client{c: client}
+	c := &Client{
+		modbusutil.ClientWithLock(client, lockutil.WithGuaranteedTimeSinceLastRelease(&sync.Mutex{}, modbusCommandSpacing)),
+		handler,
+	}
 
 	if err := c.CheckConnection(ctx); err != nil {
+		handler.Close()
 		return nil, err
 	}
 	return c, nil
@@ -97,8 +107,7 @@ func Connect(ctx context.Context, p *Params) (*Client, error) {
 
 // Close closes the modbus connection and frees up resources associated with the client.
 func (c *Client) Close() error {
-	close(c.done)
-	return nil
+	return c.modbusRTUCloser.Close()
 }
 
 const (
