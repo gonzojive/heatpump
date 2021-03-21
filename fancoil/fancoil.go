@@ -237,19 +237,3 @@ func (s *State) CollectionTime() time.Time {
 func (s *State) RegisterValues() map[Register]uint16 {
 	return s.registerValues
 }
-
-// Register is a modsbus register
-type Register pb.RegisterName
-
-func (r Register) uint16() uint16 {
-	return uint16(r)
-}
-
-// String returns a human-readable name of the modbus register.
-func (r Register) String() string {
-	return pb.RegisterName(r).String()
-}
-
-func parseTemp(value uint16) (*pb.Temperature, error) {
-	return nil, fmt.Errorf("not yet supported")
-}
