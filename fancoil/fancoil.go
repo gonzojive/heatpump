@@ -14,6 +14,7 @@
 package fancoil
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -24,8 +25,10 @@ import (
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/mdtable"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
-	"go.uber.org/multierr"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+
+	pb "github.com/gonzojive/heatpump/proto/fancoil"
 )
 
 // Parameters from https://www.chiltrix.com/control-options/Remote-Gateway-BACnet-Guide-rev2.pdf
@@ -35,13 +38,6 @@ const (
 	stopBits = 1
 	dataBits = 8
 	slaveID  = 15
-)
-
-const (
-	// Valid Holding register range
-	firstHoldingRegister Register = 1
-	lastHoldingRegister  Register = 10
-	registersPerRead              = 20
 )
 
 // Mode indicates the protocol that should be used to communicate with the CX34.
@@ -58,10 +54,12 @@ type Params struct {
 type Client struct {
 	chiltrix.ReadWriteServiceServer
 	c modbus.Client
+	// done should be closed when Client.Close() is called.
+	done chan struct{}
 }
 
 // Connect connects a new client to the heat pump or returns an error.
-func Connect(p *Params) (*Client, error) {
+func Connect(ctx context.Context, p *Params) (*Client, error) {
 	// Modbus RTU.
 	handler := modbus.NewRTUClientHandler(p.TTYDevice)
 	handler.BaudRate = baudRate
@@ -88,38 +86,60 @@ func Connect(p *Params) (*Client, error) {
 	client := modbus.NewClient(handler)
 	c := &Client{c: client}
 
-	if err := c.CheckConnection(); err != nil {
+	if err := c.CheckConnection(ctx); err != nil {
 		return nil, err
 	}
 	return c, nil
 }
 
-// ReadState returns a snapshot of the state of the heat pump.
-func (c *Client) ReadState() (*State, error) {
-	// ReadCoils, ReadInputRegisters, and ReadDiscreteInputs are not supported.
-	// However, ReadHoldingRegisters is.
-	m := make(map[Register]uint16)
-	for i := firstHoldingRegister; i <= lastHoldingRegister; i += registersPerRead {
-		count := registersPerRead
-		if i+Register(count) > lastHoldingRegister {
-			count = int(lastHoldingRegister) - int(i+1)
-		}
-		results, err := c.c.ReadHoldingRegisters(uint16(i), uint16(count))
-		if err != nil {
-			return nil, fmt.Errorf("ReadHoldingRegisters() failed: %w", err)
-		}
-		if len(results)%2 != 0 {
-			return nil, fmt.Errorf("got register data of length %d, want modulus of 2", len(results))
-		}
-		if len(results)/2 > count {
-			return nil, fmt.Errorf("returned register data of length %d exceeds expected length %d", len(results)/2, count)
-		}
-		for j := 0; j < len(results)/2; j++ {
-			value := uint16(results[j*2])<<8 + uint16(results[j*2+1])
-			m[Register(j)+i] = value
+// Close closes the modbus connection and frees up resources associated with the client.
+func (c *Client) Close() error {
+	close(c.done)
+	return nil
+}
+
+const (
+	holdingRegisterStart = uint16(pb.RegisterName_REGISTER_NAME_ON_OFF)
+	holdingRegisterCount = uint16(pb.RegisterName_REGISTER_NAME_UNIT_ADDRESS) - uint16(holdingRegisterStart) + 1
+
+	inputRegisterStart = uint16(pb.RegisterName_REGISTER_NAME_ROOM_TEMPERATURE)
+	inputRegisterCount = uint16(pb.RegisterName_REGISTER_NAME_COIL_TEMPERATURE_SENSOR_FAULT) - uint16(inputRegisterStart) + 1
+)
+
+// GetState returns a snapshot of the state of a single fan coil unit.
+func (c *Client) GetState(_ context.Context, req *pb.GetStateRequest) (*pb.GetStateResponse, error) {
+	s, err := c.readRawState()
+	if err != nil {
+		return nil, err
+	}
+	glog.Infof("got registers:\n%s", s.Report(false, nil))
+	return nil, fmt.Errorf("not fully implemented yet")
+}
+
+func (c *Client) readRawState() (*State, error) {
+	rawProto := &pb.RawRegisterSnapshot{
+		RawValues: make(map[uint32]uint32, inputRegisterCount+holdingRegisterCount),
+	}
+	populateRawProto := func(registervalues []byte, startReg uint16) {
+		for i := 0; i < len(registervalues)/2; i++ {
+			value := uint16(registervalues[i*2])<<8 + uint16(registervalues[i*2+1])
+			rawProto.RawValues[uint32(startReg)+uint32(i)] = uint32(value)
 		}
 	}
-	return &State{time.Now(), m}, nil
+
+	holdingRegisterValues, err := c.c.ReadHoldingRegisters(holdingRegisterStart, holdingRegisterCount)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unavailable, "failed to read holding registers using modbus: %v", err)
+	}
+	populateRawProto(holdingRegisterValues, holdingRegisterStart)
+
+	inputRegisterValues, err := c.c.ReadInputRegisters(inputRegisterStart, inputRegisterCount)
+	if err != nil {
+		return nil, grpc.Errorf(codes.Unavailable, "failed to read input registers using modbus: %v", err)
+	}
+	populateRawProto(inputRegisterValues, inputRegisterStart)
+
+	return StateFromSnapshotProto(time.Now(), rawProto)
 }
 
 func (c *Client) setRegisterValue(reg, value uint16) error {
@@ -132,81 +152,13 @@ func (c *Client) setRegisterValue(reg, value uint16) error {
 }
 
 // CheckConnection attempts to connect to the heat pump and returns an error if the connection fails.
-func (c *Client) CheckConnection() error {
-	var finalErr error
-
-	// if _, err := c.c.ReadFIFOQueue(1); err != nil {
-	// 	finalErr = multierr.Append(finalErr, fmt.Errorf("ReadFIFOQueue error: %w", err))
-	// }
-	val, err := c.c.ReadDiscreteInputs(0, 10)
-	glog.Infof("ReadDiscreteInputs(0, 10) = %v, %v", val, err)
-	if err != nil {
-		finalErr = multierr.Append(finalErr, fmt.Errorf("ReadDiscreteInputs error: %w", err))
+func (c *Client) CheckConnection(ctx context.Context) error {
+	if _, err := c.GetState(ctx, &pb.GetStateRequest{
+		FancoilName: fmt.Sprintf("%d", slaveID),
+	}); err != nil {
+		return fmt.Errorf("error getting state of fancoil; check connection: %w", err)
 	}
-	time.Sleep(time.Millisecond * 300)
-
-	const valuesPerRead = 1
-	//for i := uint16(0); i < math.MaxUint16; i += 10 {
-	for _, i := range []uint16{
-		// Holding registers:
-		28301,
-		28302,
-		28303,
-		28306,
-		28307,
-		28308,
-		28309,
-		28310,
-		28311,
-		28312,
-		28313,
-		28314,
-		28315,
-		28316,
-		28317,
-		28318,
-		28319,
-		28320,
-		28321,
-
-		// Input registers:
-		46801,
-		46802,
-		46803,
-		46804,
-		46805,
-		46806,
-		46807,
-		46808,
-		46809,
-		46810,
-	} {
-		value, err := c.c.ReadHoldingRegisters(i, valuesPerRead)
-		glog.Infof("ReadHoldingRegisters(%d, %d) = %v, %v", i, valuesPerRead, value, err)
-		time.Sleep(time.Millisecond * 300)
-		if err == nil {
-			glog.Infof("SUCCCCCCCCCCCCCCCCCCCCCCCCCCCESSSSSSSSS ReadHoldingRegisters(%d, %d) = %v, %v", i, valuesPerRead, value, err)
-		}
-	}
-	return fmt.Errorf("still testing")
-	/*
-			Not supported:
-
-			if _, err := c.c.ReadCoils(1, 1); err != nil {
-				finalErr = multierr.Append(finalErr, fmt.Errorf("ReadCoils error: %w", err))
-			}
-			if _, err := c.c.ReadFIFOQueue(1); err != nil {
-				finalErr = multierr.Append(finalErr, fmt.Errorf("ReadFIFOQueue error: %w", err))
-			}
-			if _, err := c.c.ReadDiscreteInputs(1, 1); err != nil {
-				finalErr = multierr.Append(finalErr, fmt.Errorf("ReadDiscreteInputs error: %w", err))
-			}
-		_, err := c.ReadState()
-		if err != nil {
-			finalErr = multierr.Append(finalErr, fmt.Errorf("ReadState failed: %w", err))
-		}
-	*/
-	return finalErr
+	return nil
 }
 
 // State is a snapshot of the heat pump's state.
@@ -215,10 +167,10 @@ type State struct {
 	registerValues map[Register]uint16
 }
 
-// StateFromProto converts a state proto into a State object.
-func StateFromProto(msg *chiltrix.State) (*State, error) {
+// StateFromSnapshotProto converts a state proto into a State object.
+func StateFromSnapshotProto(collectionTime time.Time, msg *pb.RawRegisterSnapshot) (*State, error) {
 	m := make(map[Register]uint16)
-	for k, v := range msg.GetRegisterValues().GetHoldingRegisterValues() {
+	for k, v := range msg.GetRawValues() {
 		if k > math.MaxUint16 {
 			return nil, fmt.Errorf("register key %d is larger than the max uint16 %d", k, math.MaxInt16)
 		}
@@ -227,10 +179,7 @@ func StateFromProto(msg *chiltrix.State) (*State, error) {
 		}
 		m[Register(k)] = uint16(v)
 	}
-	if msg.GetCollectionTime() == nil {
-		return nil, fmt.Errorf("state is missing collection time")
-	}
-	return &State{msg.CollectionTime.AsTime(), m}, nil
+	return &State{collectionTime, m}, nil
 }
 
 // Report returns a human readable summary of the state of the heat pump.
@@ -265,16 +214,16 @@ func (s *State) String() string {
 	return s.Report(false, nil)
 }
 
-// Proto returns the protobuf form of state.
-func (s *State) Proto() *chiltrix.State {
-	msg := &chiltrix.State{
-		CollectionTime: timestamppb.New(s.collectionTime),
-		RegisterValues: &chiltrix.RegisterSnapshot{
-			HoldingRegisterValues: make(map[uint32]uint32),
+// ResponseProto returns the protobuf form of state.
+func (s *State) ResponseProto() *pb.GetStateResponse {
+	msg := &pb.GetStateResponse{
+		RawSnapshot: &pb.RawRegisterSnapshot{
+			RawValues: make(map[uint32]uint32),
 		},
 	}
+	m := msg.GetRawSnapshot().GetRawValues()
 	for reg, value := range s.registerValues {
-		msg.GetRegisterValues().GetHoldingRegisterValues()[uint32(reg.uint16())] = uint32(value)
+		m[uint32(reg.uint16())] = uint32(value)
 	}
 	return msg
 }
@@ -289,33 +238,8 @@ func (s *State) RegisterValues() map[Register]uint16 {
 	return s.registerValues
 }
 
-// DiffStates returns a human readable description of the difference between two State values.
-func DiffStates(a, b *State) (string, map[Register]bool) {
-	diffRegs := map[Register]bool{}
-	type entry struct {
-		reg  Register
-		a, b uint16
-	}
-	var entries []entry
-	for k, v := range a.registerValues {
-		if v != b.registerValues[k] {
-			entries = append(entries, entry{k, v, b.registerValues[k]})
-			diffRegs[k] = true
-		}
-	}
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].reg < entries[j].reg
-	})
-	builder := &mdtable.Builder{}
-	builder.SetHeader([]string{"Register no.", "Register name", "Old Value", "New Value"})
-	for _, e := range entries {
-		builder.AddRow([]string{fmt.Sprintf("%d", e.reg), e.reg.String(), fmt.Sprintf("%d", e.a), fmt.Sprintf("%d", e.b)})
-	}
-	return builder.Build(), diffRegs
-}
-
 // Register is a modsbus register
-type Register uint16
+type Register pb.RegisterName
 
 func (r Register) uint16() uint16 {
 	return uint16(r)
@@ -323,5 +247,9 @@ func (r Register) uint16() uint16 {
 
 // String returns a human-readable name of the modbus register.
 func (r Register) String() string {
-	return fmt.Sprintf("%d", r)
+	return pb.RegisterName(r).String()
+}
+
+func parseTemp(value uint16) (*pb.Temperature, error) {
+	return nil, fmt.Errorf("not yet supported")
 }

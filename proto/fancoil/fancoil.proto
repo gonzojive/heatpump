@@ -9,7 +9,7 @@ import "google/protobuf/timestamp.proto";
 
 // FanCoilService is an RPC service for controlling the CX34.
 service FanCoilService {
-    // Change a parameter.
+    // Get a snapshot of the state of a single fan coil unit.
     rpc GetState (GetStateRequest) returns (GetStateResponse) {}
 }
 
@@ -34,7 +34,7 @@ message RawRegisterSnapshot {
     map<uint32, uint32> raw_values = 1;
 }
 
-// State holds a parsed version of the fan coil's parsed
+// State holds a parsed version of the fan coil's RegisterSnapshot.
 message State {
     // The timestamp when the state was collected.
     .google.protobuf.Timestamp snapshot_time = 7;

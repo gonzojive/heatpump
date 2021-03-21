@@ -21,7 +21,7 @@ func main() {
 	}
 }
 func run(ctx context.Context) error {
-	_, err := fancoil.Connect(&fancoil.Params{
+	_, err := fancoil.Connect(ctx, &fancoil.Params{
 		TTYDevice: *rs484TTYModbus,
 	})
 	if err != nil {
