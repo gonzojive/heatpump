@@ -25,9 +25,7 @@ func (r Register) String() string {
 }
 
 func parseRegisterValues(values map[Register]uint16) (*pb.State, error) {
-	out := &pb.State{
-		ModbusAddress: uint32(values[Register(pb.RegisterName_REGISTER_NAME_UNIT_ADDRESS)]),
-	}
+	out := &pb.State{}
 
 	// Temperature values
 	for _, spec := range []struct {
@@ -70,6 +68,10 @@ func parseRegisterValues(values map[Register]uint16) (*pb.State, error) {
 			}
 			*spec.dst = t
 		}
+	}
+
+	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_UNIT_ADDRESS)]; ok {
+		out.ModbusAddress = &pb.ModbusAddress{Address: uint32(val)}
 	}
 
 	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_CURRENT_FAN_SPEED)]; ok {
@@ -147,6 +149,17 @@ func parseFanSetting(value uint16) (pb.FanSetting, error) {
 			return pb.FanSetting(value), nil
 		}
 		return pb.FanSetting(value), fmt.Errorf("unknown fan setting value %v", value)
+	}
+}
+
+func fanSettingToModbusValue(v pb.FanSetting) (uint16, error) {
+	switch v {
+	case pb.FanSetting_FAN_SETTING_UNSPECIFIED:
+		return 0, fmt.Errorf("no modbus value for %s", v)
+	case pb.FanSetting_FAN_SETTING_AUTO:
+		return 0, nil
+	default:
+		return uint16(v), nil
 	}
 }
 

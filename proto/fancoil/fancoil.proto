@@ -11,6 +11,9 @@ import "google/protobuf/timestamp.proto";
 service FanCoilService {
     // Get a snapshot of the state of a single fan coil unit.
     rpc GetState (GetStateRequest) returns (GetStateResponse) {}
+
+    // Set some parameters of the fan coil unit.
+    rpc SetState (SetStateRequest) returns (SetStateResponse) {}
 }
 
 message GetStateRequest {
@@ -42,11 +45,11 @@ message State {
     // Parsed register values.
     PowerStatus power_status = 2; // 28301
     Mode mode = 3; // 28302
-    Temperature room_temperature = 4;
-    Temperature coil_temperature = 5;
+    Temperature room_temperature = 4; // readonly
+    Temperature coil_temperature = 5; // readonly
     FanSetting preference_fan_setting = 6;
-    FanSetting current_fan_setting = 7;
-    FanSpeed fan_speed = 8;
+    FanSetting current_fan_setting = 7; // readonly
+    FanSpeed fan_speed = 8; // readonly
 
     // Setpoint for heating mode.
     Temperature heating_target_temperature = 9;
@@ -64,11 +67,27 @@ message State {
     // Whether to use floor heating.
     FloorHeatingMode floor_heating_mode = 15;
 
-    // Modbus addres of the fan coil unit. 0-99.
-    uint32 modbus_address = 16;
+    // Modbus address of the fan coil unit. 0-99.
+    ModbusAddress modbus_address = 16;
 
     // Whether the electromechanical bypass valve is active or not.
     ValveState valve_state = 17;
+}
+
+message SetStateRequest {
+    // The name of the fan coil unit. Empty for default. Otherwise, the modbus
+    // address formatted as a 10-base integer.
+    string fancoil_name = 1;
+
+    FanSetting preference_fan_setting = 6;
+}
+
+message ModbusAddress {
+    // Address of a modbus device.
+    uint32 address = 1;
+}
+
+message SetStateResponse {
 }
 
 enum TemperatureUnits {

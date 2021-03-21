@@ -20,6 +20,8 @@ const _ = grpc.SupportPackageIsVersion7
 type FanCoilServiceClient interface {
 	// Get a snapshot of the state of a single fan coil unit.
 	GetState(ctx context.Context, in *GetStateRequest, opts ...grpc.CallOption) (*GetStateResponse, error)
+	// Set some parameters of the fan coil unit.
+	SetState(ctx context.Context, in *SetStateRequest, opts ...grpc.CallOption) (*SetStateResponse, error)
 }
 
 type fanCoilServiceClient struct {
@@ -39,12 +41,23 @@ func (c *fanCoilServiceClient) GetState(ctx context.Context, in *GetStateRequest
 	return out, nil
 }
 
+func (c *fanCoilServiceClient) SetState(ctx context.Context, in *SetStateRequest, opts ...grpc.CallOption) (*SetStateResponse, error) {
+	out := new(SetStateResponse)
+	err := c.cc.Invoke(ctx, "/fancoil.FanCoilService/SetState", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FanCoilServiceServer is the server API for FanCoilService service.
 // All implementations must embed UnimplementedFanCoilServiceServer
 // for forward compatibility
 type FanCoilServiceServer interface {
 	// Get a snapshot of the state of a single fan coil unit.
 	GetState(context.Context, *GetStateRequest) (*GetStateResponse, error)
+	// Set some parameters of the fan coil unit.
+	SetState(context.Context, *SetStateRequest) (*SetStateResponse, error)
 	mustEmbedUnimplementedFanCoilServiceServer()
 }
 
@@ -54,6 +67,9 @@ type UnimplementedFanCoilServiceServer struct {
 
 func (UnimplementedFanCoilServiceServer) GetState(context.Context, *GetStateRequest) (*GetStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetState not implemented")
+}
+func (UnimplementedFanCoilServiceServer) SetState(context.Context, *SetStateRequest) (*SetStateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetState not implemented")
 }
 func (UnimplementedFanCoilServiceServer) mustEmbedUnimplementedFanCoilServiceServer() {}
 
@@ -86,6 +102,24 @@ func _FanCoilService_GetState_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FanCoilService_SetState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FanCoilServiceServer).SetState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/fancoil.FanCoilService/SetState",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FanCoilServiceServer).SetState(ctx, req.(*SetStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FanCoilService_ServiceDesc is the grpc.ServiceDesc for FanCoilService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -96,6 +130,10 @@ var FanCoilService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetState",
 			Handler:    _FanCoilService_GetState_Handler,
+		},
+		{
+			MethodName: "SetState",
+			Handler:    _FanCoilService_SetState_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

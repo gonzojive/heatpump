@@ -3,7 +3,6 @@ package fancoil
 import (
 	"context"
 
-	fancoil "github.com/gonzojive/heatpump/proto/fancoil"
 	pb "github.com/gonzojive/heatpump/proto/fancoil"
 )
 
@@ -20,6 +19,18 @@ type server struct {
 }
 
 // Get a snapshot of the state of a single fan coil unit.
-func (s *server) GetState(ctx context.Context, req *fancoil.GetStateRequest) (*fancoil.GetStateResponse, error) {
+func (s *server) GetState(ctx context.Context, req *pb.GetStateRequest) (*pb.GetStateResponse, error) {
 	return s.c.GetState(ctx, req)
+}
+
+// Get a snapshot of the state of a single fan coil unit.
+func (s *server) SetState(ctx context.Context, req *pb.SetStateRequest) (*pb.SetStateResponse, error) {
+	if req.GetPreferenceFanSetting() != pb.FanSetting_FAN_SETTING_UNSPECIFIED {
+		registerValue, err := fanSettingToModbusValue(req.GetPreferenceFanSetting())
+		if err != nil {
+			return nil, err
+		}
+		s.c.setRegisterValue(Register(pb.RegisterName_REGISTER_NAME_FANSPEED), registerValue)
+	}
+	return &pb.SetStateResponse{}, nil
 }
