@@ -48,5 +48,14 @@ func (s *server) SetState(ctx context.Context, req *pb.SetStateRequest) (*pb.Set
 			return nil, grpc.Errorf(codes.Unavailable, "error setting modbus value: %v", err)
 		}
 	}
+	if req.GetValveSetting() != pb.ValveSetting_VALVE_SETTING_UNSPECIFIED {
+		registerValue, ok := valveSettingMap.getByEnumNumber(req.GetValveSetting().Number())
+		if !ok {
+			return nil, grpc.Errorf(codes.Internal, "enum %s has no known encoding as a modbus register", req.GetValveSetting())
+		}
+		if err := s.c.setRegisterValue(Register(pb.RegisterName_REGISTER_NAME_USE_VALVE), registerValue); err != nil {
+			return nil, grpc.Errorf(codes.Unavailable, "error setting modbus value: %v", err)
+		}
+	}
 	return &pb.SetStateResponse{}, nil
 }

@@ -2,14 +2,22 @@ package fancoil
 
 import (
 	"fmt"
+	"math"
 
 	pb "github.com/gonzojive/heatpump/proto/fancoil"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 const (
 	faultyTemperatureCode = 32767
 	negativeTempBit       = uint16(1 << 15)
 	tempNonSignMask       = 0xFFFF ^ negativeTempBit
+)
+
+// Enum maps
+var (
+	valveSettingMap = parseEnumRegisterValues(pb.ValveSetting(0).Descriptor())
 )
 
 // Register is a modsbus register
@@ -119,6 +127,11 @@ func parseRegisterValues(values map[Register]uint16) (*pb.State, error) {
 	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_FAN_RPM)]; ok {
 		out.FanSpeed = &pb.FanSpeed{Rpm: int64(val)}
 	}
+	valveSetting, err := valveSettingMap.parseRegister(values, Register(pb.RegisterName_REGISTER_NAME_USE_VALVE))
+	if err != nil {
+		return nil, err
+	}
+	out.ValveSetting = pb.ValveSetting(valveSetting)
 
 	return out, nil
 }
@@ -218,4 +231,51 @@ func powerStatusToModbusValue(v pb.PowerStatus) (uint16, error) {
 	default:
 		return 0, fmt.Errorf("unsupported power status value %s", v)
 	}
+}
+
+type enumRegisterValueMap struct {
+	numberToValue map[protoreflect.EnumNumber]uint16
+}
+
+func (m *enumRegisterValueMap) getByRegisterValue(v uint16) (protoreflect.EnumNumber, bool) {
+	for number, value := range m.numberToValue {
+		if value == v {
+			return number, true
+		}
+	}
+	return 0, false
+}
+
+func (m *enumRegisterValueMap) getByEnumNumber(n protoreflect.EnumNumber) (uint16, bool) {
+	v, ok := m.numberToValue[n]
+	return v, ok
+}
+
+func (m *enumRegisterValueMap) parseRegister(registerValues map[Register]uint16, register Register) (protoreflect.EnumNumber, error) {
+	v, registerIsSet := registerValues[register]
+	if !registerIsSet {
+		// Zero is always UNSPECIFIED.
+		return 0, nil
+	}
+	if num, ok := m.getByRegisterValue(v); ok {
+		return num, nil
+	}
+	return 0, fmt.Errorf("unknown register value %d does not correspond to any enum value in the map: %v", v, m.numberToValue)
+}
+
+func parseEnumRegisterValues(def protoreflect.EnumDescriptor) *enumRegisterValueMap {
+	m := make(map[protoreflect.EnumNumber]uint16)
+	for i := 0; i < def.Values().Len(); i++ {
+		valDef := def.Values().Get(i)
+		opt := proto.GetExtension(valDef.Options(), pb.E_ModbusOptions)
+		if opt == nil {
+			continue
+		}
+		mbOpt := opt.(*pb.ModbusEnumValueOptions)
+		if mbOpt.GetRegisterValue() < 0 || mbOpt.GetRegisterValue() > math.MaxUint16 {
+			panic(fmt.Errorf("invalid register value for field %v: not a uint16", valDef))
+		}
+		m[valDef.Number()] = uint16(mbOpt.GetRegisterValue())
+	}
+	return &enumRegisterValueMap{m}
 }

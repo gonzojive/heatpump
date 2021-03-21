@@ -28,7 +28,7 @@ type timeRestrictedLock struct {
 
 func (l *timeRestrictedLock) Lock() {
 	l.underlying.Lock()
-	remaining := l.now().Sub(l.lastReleased) - l.minTimeSinceUnlock
+	remaining := l.minTimeSinceUnlock - l.now().Sub(l.lastReleased)
 	if remaining < 0 {
 		return
 	}

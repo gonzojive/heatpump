@@ -68,6 +68,7 @@ func Test_parseRegisterValues(t *testing.T) {
 				FanSpeed:             &pb.FanSpeed{Rpm: 1005},
 				ModbusAddress:        &pb.ModbusAddress{Address: 15},
 				ValveState:           pb.ValveState_VALVE_STATE_OFF,
+				ValveSetting:         pb.ValveSetting_VALVE_SETTING_ENABLED,
 				PowerStatus:          pb.PowerStatus_POWER_STATUS_ON,
 			},
 			false,

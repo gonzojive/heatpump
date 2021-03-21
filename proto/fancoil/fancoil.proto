@@ -6,6 +6,19 @@ package fancoil;
 option go_package = "github.com/gonzojive/heatpump/proto/fancoil";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.EnumValueOptions {
+    ModbusEnumValueOptions modbus_options = 60000;
+
+    // Implementation note about extension range: see
+    // https://developers.google.com/protocol-buffers/docs/proto#customoptions.
+}
+
+message ModbusEnumValueOptions {
+    // The modbus encoding of the value as a big endian uint16.
+    uint32 register_value = 1;
+}
 
 // FanCoilService is an RPC service for controlling the CX34.
 service FanCoilService {
@@ -72,6 +85,9 @@ message State {
 
     // Whether the electromechanical bypass valve is active or not.
     ValveState valve_state = 17;
+    // Whether the electromechanical bypass valve is installed and should be
+    // used. When the valve is "on" it means the 
+    ValveSetting valve_setting = 18;
 }
 
 message SetStateRequest {
@@ -81,6 +97,9 @@ message SetStateRequest {
 
     PowerStatus power_status = 2;
     FanSetting preference_fan_setting = 6;
+    // Whether the electromechanical bypass valve is installed and should be
+    // used. When the valve is "on" it means the 
+    ValveSetting valve_setting = 18;
 }
 
 message ModbusAddress {
@@ -105,8 +124,24 @@ enum FloorHeatingMode {
 
 enum ValveState {
     VALVE_STATE_UNSPECIFIED = 0;
+
+    // The valve is directing water to not go through the heat exchange coils of
+    // the fan coil unit.
     VALVE_STATE_ON = 1;
+
+    // The valve is directing water to not go through the fan coil unit.
     VALVE_STATE_OFF = 2;
+}
+
+enum ValveSetting {
+    VALVE_SETTING_UNSPECIFIED = 0;
+    // The valve is installed and enabled.
+    VALVE_SETTING_ENABLED = 1
+        [(modbus_options).register_value = 1];
+    
+    // The valve is not installed or installed and should not be used.
+    VALVE_SETTING_DISABLED = 2
+        [(modbus_options).register_value = 0];
 }
 
 // RegisterName is an enum of all the known registers of the fan coil units.
