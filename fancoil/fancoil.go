@@ -206,7 +206,13 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 	for _, e := range entries {
 		b.AddRow([]string{fmt.Sprintf("%d", e.reg), e.reg.String(), fmt.Sprintf("%d", e.value)})
 	}
-	return b.Build()
+	parsedStr := ""
+	if parsed, err := parseRegisterValues(s.registerValues); err != nil {
+		parsedStr = fmt.Sprintf("error parsing register values: %v", err)
+	} else {
+		parsedStr = fmt.Sprintf("State proto: %s", parsed)
+	}
+	return fmt.Sprintf("%s\n\n%s", b.Build(), parsedStr)
 }
 
 // String returns a human readable summary of the state of the heat pump.

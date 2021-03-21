@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FanCoilServiceClient interface {
-	// Change a parameter.
+	// Get a snapshot of the state of a single fan coil unit.
 	GetState(ctx context.Context, in *GetStateRequest, opts ...grpc.CallOption) (*GetStateResponse, error)
 }
 
@@ -43,7 +43,7 @@ func (c *fanCoilServiceClient) GetState(ctx context.Context, in *GetStateRequest
 // All implementations must embed UnimplementedFanCoilServiceServer
 // for forward compatibility
 type FanCoilServiceServer interface {
-	// Change a parameter.
+	// Get a snapshot of the state of a single fan coil unit.
 	GetState(context.Context, *GetStateRequest) (*GetStateResponse, error)
 	mustEmbedUnimplementedFanCoilServiceServer()
 }

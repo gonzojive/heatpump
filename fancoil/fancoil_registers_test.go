@@ -52,8 +52,10 @@ func Test_parseRegisterValues(t *testing.T) {
 				Register(pb.RegisterName_REGISTER_NAME_COIL_TEMPERATURE_SENSOR_FAULT):         0,
 			},
 			&pb.State{
-				CoilTemperature: &pb.Temperature{DegreesCelcius: 41},
-				RoomTemperature: &pb.Temperature{DegreesCelcius: 20},
+				CoilTemperature:      &pb.Temperature{DegreesCelcius: 41},
+				RoomTemperature:      &pb.Temperature{DegreesCelcius: 20},
+				PreferenceFanSetting: pb.FanSetting_FAN_SETTING_LOW,
+				CurrentFanSetting:    pb.FanSetting_FAN_SETTING_LOW,
 			},
 			false,
 		},

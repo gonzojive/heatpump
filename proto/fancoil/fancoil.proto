@@ -37,15 +37,16 @@ message RawRegisterSnapshot {
 // State holds a parsed version of the fan coil's RegisterSnapshot.
 message State {
     // The timestamp when the state was collected.
-    .google.protobuf.Timestamp snapshot_time = 7;
+    .google.protobuf.Timestamp snapshot_time = 1;
 
     // Parsed register values.
-    PowerStatus power_status = 1; // 28301
-    Mode mode = 2; // 28302
-    Temperature room_temperature = 3;
-    Temperature coil_temperature = 4;
-    FanSetting fan_setting = 5;
-    FanSpeed fan_speed = 6;
+    PowerStatus power_status = 2; // 28301
+    Mode mode = 3; // 28302
+    Temperature room_temperature = 4;
+    Temperature coil_temperature = 5;
+    FanSetting preference_fan_setting = 6;
+    FanSetting current_fan_setting = 7;
+    FanSpeed fan_speed = 8;
 }
 
 // RegisterName is an enum of all the known registers of the fan coil units.
