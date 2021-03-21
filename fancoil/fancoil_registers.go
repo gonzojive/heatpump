@@ -18,6 +18,7 @@ const (
 // Enum maps
 var (
 	valveSettingMap = parseEnumRegisterValues(pb.ValveSetting(0).Descriptor())
+	fanSettingDef   = parseEnumRegisterValues(pb.FanSetting(0).Descriptor())
 )
 
 // Register is a modsbus register
@@ -132,6 +133,12 @@ func parseRegisterValues(values map[Register]uint16) (*pb.State, error) {
 		return nil, err
 	}
 	out.ValveSetting = pb.ValveSetting(valveSetting)
+
+	FanSetting, err := fanSettingDef.parseRegister(values, Register(pb.RegisterName_REGISTER_NAME_FANSPEED))
+	if err != nil {
+		return nil, err
+	}
+	out.PreferenceFanSetting = pb.FanSetting(FanSetting)
 
 	return out, nil
 }

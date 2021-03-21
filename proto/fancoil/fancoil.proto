@@ -192,13 +192,20 @@ message Temperature {
 
 enum FanSetting {
     FAN_SETTING_UNSPECIFIED = 0;
-    FAN_SETTING_OFF = 7; // The encoded value for off is actually 0.
-    FAN_SETTING_ULTRA_LOW = 1;
-    FAN_SETTING_LOW = 2;
-    FAN_SETTING_MEDIUM = 3;
-    FAN_SETTING_HIGH = 4;
-    FAN_SETTING_MAX = 5;
-    FAN_SETTING_AUTO = 6;
+    FAN_SETTING_OFF = 7
+        [(modbus_options).register_value = 0];
+    FAN_SETTING_ULTRA_LOW = 1
+        [(modbus_options).register_value = 1];
+    FAN_SETTING_LOW = 2
+        [(modbus_options).register_value = 2];
+    FAN_SETTING_MEDIUM = 3
+        [(modbus_options).register_value = 3];
+    FAN_SETTING_HIGH = 4
+        [(modbus_options).register_value = 4];
+    FAN_SETTING_MAX = 5
+        [(modbus_options).register_value = 5];
+    FAN_SETTING_AUTO = 6
+        [(modbus_options).register_value = 6];
 }
 
 message FanSpeed {
