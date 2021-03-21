@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/encoding/prototext"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	pb "github.com/gonzojive/heatpump/proto/fancoil"
 )
@@ -113,8 +114,7 @@ func (c *Client) GetState(_ context.Context, req *pb.GetStateRequest) (*pb.GetSt
 	if err != nil {
 		return nil, err
 	}
-	glog.Infof("got registers:\n%s", s.Report(false, nil))
-	return nil, fmt.Errorf("not fully implemented yet")
+	return s.ResponseProto(), nil
 }
 
 func (c *Client) readRawState() (*State, error) {
@@ -166,6 +166,7 @@ func (c *Client) CheckConnection(ctx context.Context) error {
 type State struct {
 	collectionTime time.Time
 	registerValues map[Register]uint16
+	parsedState    *pb.State
 }
 
 // StateFromSnapshotProto converts a state proto into a State object.
@@ -180,7 +181,12 @@ func StateFromSnapshotProto(collectionTime time.Time, msg *pb.RawRegisterSnapsho
 		}
 		m[Register(k)] = uint16(v)
 	}
-	return &State{collectionTime, m}, nil
+	parsed, err := parseRegisterValues(m)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing register values: %v", err)
+	}
+	parsed.SnapshotTime = timestamppb.New(collectionTime)
+	return &State{collectionTime, m, parsed}, nil
 }
 
 // Report returns a human readable summary of the state of the heat pump.
@@ -227,6 +233,7 @@ func (s *State) ResponseProto() *pb.GetStateResponse {
 		RawSnapshot: &pb.RawRegisterSnapshot{
 			RawValues: make(map[uint32]uint32),
 		},
+		State: s.parsedState,
 	}
 	m := msg.GetRawSnapshot().GetRawValues()
 	for reg, value := range s.registerValues {

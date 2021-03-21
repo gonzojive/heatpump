@@ -9,8 +9,10 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/fancoil"
-	fcpb "github.com/gonzojive/heatpump/proto/fancoil"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+
+	fcpb "github.com/gonzojive/heatpump/proto/fancoil"
 )
 
 var (
@@ -40,6 +42,8 @@ func run(ctx context.Context) error {
 		}
 		s := grpc.NewServer()
 		fcpb.RegisterFanCoilServiceServer(s, fancoil.GRPCServiceFromClient(client))
+		reflection.Register(s)
+		glog.Infof("gRPC server started on :%d; try using https://github.com/fullstorydev/grpcui to connect to the service", *grpcPort)
 		if err := s.Serve(lis); err != nil {
 			return fmt.Errorf("failed to serve: %w", err)
 		}

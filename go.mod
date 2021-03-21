@@ -8,6 +8,7 @@ go 1.14
 
 require (
 	github.com/dgraph-io/badger/v3 v3.2011.1
+	github.com/fullstorydev/grpcui v1.1.0 // indirect
 	github.com/goburrow/modbus v0.1.0
 	github.com/goburrow/serial v0.1.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
