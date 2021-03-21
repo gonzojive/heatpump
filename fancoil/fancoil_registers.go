@@ -107,6 +107,13 @@ func parseRegisterValues(values map[Register]uint16) (*pb.State, error) {
 		}
 		out.ValveState = enumVal
 	}
+	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_ON_OFF)]; ok {
+		enumVal, err := parsePowerStatus(val)
+		if err != nil {
+			return nil, err
+		}
+		out.PowerStatus = enumVal
+	}
 	if val, ok := values[Register(pb.RegisterName_REGISTER_NAME_FAN_RPM)]; ok {
 		out.FanSpeed = &pb.FanSpeed{Rpm: int64(val)}
 	}
@@ -173,5 +180,16 @@ func parseValveState(value uint16) (pb.ValveState, error) {
 		return pb.ValveState_VALVE_STATE_ON, nil
 	default:
 		return pb.ValveState_VALVE_STATE_UNSPECIFIED, fmt.Errorf("invalid floor heating mode value %d", value)
+	}
+}
+
+func parsePowerStatus(value uint16) (pb.PowerStatus, error) {
+	switch value {
+	case 0:
+		return pb.PowerStatus_POWER_STATUS_OFF, nil
+	case 1:
+		return pb.PowerStatus_POWER_STATUS_ON, nil
+	default:
+		return pb.PowerStatus_POWER_STATUS_UNSPECIFIED, fmt.Errorf("invalid floor heating mode value %d", value)
 	}
 }
