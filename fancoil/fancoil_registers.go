@@ -274,11 +274,10 @@ func parseEnumRegisterValues(def protoreflect.EnumDescriptor) *enumRegisterValue
 	m := make(map[protoreflect.EnumNumber]uint16)
 	for i := 0; i < def.Values().Len(); i++ {
 		valDef := def.Values().Get(i)
-		opt := proto.GetExtension(valDef.Options(), pb.E_ModbusOptions)
-		if opt == nil {
+		if !proto.HasExtension(valDef.Options(), pb.E_ModbusOptions) {
 			continue
 		}
-		mbOpt := opt.(*pb.ModbusEnumValueOptions)
+		mbOpt := proto.GetExtension(valDef.Options(), pb.E_ModbusOptions).(*pb.ModbusEnumValueOptions)
 		if mbOpt.GetRegisterValue() < 0 || mbOpt.GetRegisterValue() > math.MaxUint16 {
 			panic(fmt.Errorf("invalid register value for field %v: not a uint16", valDef))
 		}
