@@ -193,8 +193,12 @@ Table of registers with values that changed
 
 // Known Register values.
 const (
+	ACMode                     Register = 141 // 0 = cool, 1 = heat
+	TargetACCoolingModeTemp    Register = 142
 	TargetACHeatingModeTemp    Register = 143
 	TargetDomesticHotWaterTemp Register = 144
+	// See page 47-48 of https://www.chiltrix.com/documents/CX34-IOM-3.pdf
+	ECWaterPumpMinimumSpeed Register = 53 // 40-80 (corresponding to 40%-80%): Minimum electronically commutated water pump speed.
 	// See page 51 of https://www.chiltrix.com/documents/CX34-IOM-3.pdf
 	OutPipeTemp                           Register = 200
 	CompressorDischargeTemp               Register = 201
@@ -261,11 +265,16 @@ const (
 
 // Source: https://www.chiltrix.com/control-options/Remote-Gateway-BACnet-Guide-rev2.pdf
 var registerNames = map[Register]string{
-	143: "TargetACHeatingModeTemp",
-	144: "TargetDomesticHotWaterTemp", // was: "Din7 AC Cooling Mode Switch",
+	ACMode:                  "ACMode",
+	TargetACCoolingModeTemp: "TargetACCoolingModeTemp",
+	TargetACHeatingModeTemp: "TargetACHeatingModeTemp",
+	144:                     "TargetDomesticHotWaterTemp", // was: "Din7 AC Cooling Mode Switch",
 	// Starting at 200, it's all the C parameters from the details screen.
 	WaterInletSensorTemp1: "WaterInletSensorTemp1",
 	WaterInletSensorTemp2: "WaterInletSensorTemp2",
+
+	// P0-... registers.
+	ECWaterPumpMinimumSpeed: "ECWaterPumpMinimumSpeed",
 
 	OutPipeTemp:                           "OutPipeTemp",
 	CompressorDischargeTemp:               "CompressorDischargeTemp",
