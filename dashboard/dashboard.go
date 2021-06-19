@@ -39,6 +39,7 @@ const (
 
 // Run runs a dashboard that displays information about the heat pump.
 func Run(ctx context.Context, historianAddr string, httpPort int) error {
+	glog.Infof("dialing %s...", historianAddr)
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(historianAddr, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
@@ -47,6 +48,7 @@ func Run(ctx context.Context, historianAddr string, httpPort int) error {
 	defer conn.Close()
 	c := chiltrix.NewHistorianClient(conn)
 
+	glog.Infof("starting cache...")
 	cache, closer, err := newCache(ctx, c)
 	if err != nil {
 		return err
@@ -56,6 +58,7 @@ func Run(ctx context.Context, historianAddr string, httpPort int) error {
 	server := &server{c, cache}
 	server.registerHandlers()
 
+	glog.Infof("starting up http server...")
 	return (&http.Server{Addr: fmt.Sprintf(":%d", httpPort)}).ListenAndServe()
 }
 

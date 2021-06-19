@@ -17,6 +17,7 @@ var (
 
 func main() {
 	flag.Parse()
+	glog.Infof("starting up heat pump dashboard at http://localhost:%d", *httpPort)
 	if err := dashboard.Run(context.Background(), *historianAddr, *httpPort); err != nil {
 		glog.Exitf("%v", err)
 	}
