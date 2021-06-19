@@ -236,7 +236,7 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 
 			table.AddRow([]string{
 				s.CollectionTime().Local().Format(machineTimeLayout),
-				fmt.Sprintf("%.1f", s.ACHeatingTargetTemp().Celsius()),
+				fmt.Sprintf("%.1f", s.ACTargetTemp().Celsius()),
 				fmt.Sprintf("%.1f", s.ACInletWaterTemp().Celsius()),
 				fmt.Sprintf("%.1f", s.ACOutletWaterTemp().Celsius()),
 				fmt.Sprintf("%.1f", s.AmbientTemp().Celsius()),
@@ -254,7 +254,7 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 			cop = fmt.Sprintf("%s (%.1fkW/%.1fkW)", cop, s.UsefulHeatRate().Kilowatts(), s.ApparentPower().Kilowatts())
 			table.AddRow([]string{
 				s.CollectionTime().Local().Format(timeLayout),
-				formatTemp(s.ACHeatingTargetTemp()),
+				formatTemp(s.ACTargetTemp()),
 				formatTemp(s.ACInletWaterTemp()),
 				formatTemp(s.ACOutletWaterTemp()),
 				formatTemp(s.AmbientTemp()),

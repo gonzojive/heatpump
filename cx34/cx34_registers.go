@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/units"
 )
 
@@ -35,6 +36,15 @@ func (s *State) FlowRate() units.FlowRate {
 func (s *State) SuctionTemp() units.Temperature {
 	deciDegreesC := s.registerValues[SuctionTemp]
 	return units.FromCelsius(float64(deciDegreesC) / 10.0)
+}
+
+// ACTargetTemp returns the active setpoint temperature.
+func (s *State) ACTargetTemp() units.Temperature {
+	degreesC := s.registerValues[TargetACHeatingModeTemp]
+	if s.ACMode().IsCooling() {
+		degreesC = s.registerValues[TargetACCoolingModeTemp]
+	}
+	return units.FromCelsius(float64(degreesC))
 }
 
 // ACHeatingTargetTemp returns the active setpoint temperature.
@@ -142,12 +152,60 @@ func (s *State) COP() (units.CoefficientOfPerformance, bool) {
 	if workRate == 0 {
 		return 0, false
 	}
-	return units.CoefficientOfPerformance(s.UsefulHeatRate().Watts() / workRate.Watts()), true
+	baseCOP := units.CoefficientOfPerformance(s.UsefulHeatRate().Watts() / workRate.Watts())
+	if s.ACMode().IsCooling() {
+		return baseCOP * -1, true
+	}
+	return baseCOP, true
 }
 
 // DeltaT returns the outlet temperature minust he inlet temperature
 func (s *State) DeltaT() units.Temperature {
 	return s.ACOutletWaterTemp() - s.ACInletWaterTemp()
+}
+
+// ACMode returns the outlet temperature minust he inlet temperature
+func (s *State) ACMode() AirConditioningMode {
+	raw := s.registerValues[ACMode]
+	mode, err := parseAirConditioningMode(raw)
+	if err != nil {
+		glog.Errorf("error parsing AC mode - should add %d to the enum definition to fix: %w", raw, err)
+	}
+	return mode
+}
+
+// AirConditioningMode specifies whether the heat pump is configured to heat,
+// cool, heat+domestic hot water, or cool+domestic hot water.
+type AirConditioningMode uint8
+
+// Valid AirConditioningMode values.
+const (
+	AirConditioningModeCooling AirConditioningMode = 0
+	AirConditioningModeHeating AirConditioningMode = 1
+	// Heat+DHW, Cool+DHW are options but I'm unsure of the values.
+)
+
+var validACModes = map[AirConditioningMode]struct{}{
+	AirConditioningModeCooling: {},
+	AirConditioningModeHeating: {},
+}
+
+func parseAirConditioningMode(val uint16) (AirConditioningMode, error) {
+	asEnum := AirConditioningMode(val)
+	if _, ok := validACModes[asEnum]; ok {
+		return asEnum, nil
+	}
+	return asEnum, fmt.Errorf("invalid ACMode value %d")
+}
+
+// IsCooling reports if the mode is cooling or cooling+domestic hot water.
+func (m AirConditioningMode) IsCooling() bool {
+	return m == AirConditioningModeCooling
+}
+
+// IsHeating reports if the mode is heating or heating+domestic hot water.
+func (m AirConditioningMode) IsHeating() bool {
+	return m == AirConditioningModeHeating
 }
 
 /*
