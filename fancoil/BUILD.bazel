@@ -1,0 +1,42 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "fancoil",
+    srcs = [
+        "fancoil.go",
+        "fancoil_grpc_server.go",
+        "fancoil_registers.go",
+    ],
+    importpath = "github.com/gonzojive/heatpump/fancoil",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//mdtable",
+        "//proto/fancoil",
+        "//util/lockutil",
+        "//util/modbusutil",
+        "@com_github_goburrow_modbus//:modbus",
+        "@com_github_goburrow_serial//:serial",
+        "@com_github_golang_glog//:glog",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
+        "@org_golang_google_protobuf//encoding/prototext",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//types/known/timestamppb",
+    ],
+)
+
+go_test(
+    name = "fancoil_test",
+    srcs = [
+        "fancoil_registers_test.go",
+        "fancoil_test.go",
+    ],
+    embed = [":fancoil"],
+    deps = [
+        "//proto/fancoil",
+        "@com_github_google_go_cmp//cmp",
+        "@org_golang_google_protobuf//testing/protocmp",
+    ],
+)

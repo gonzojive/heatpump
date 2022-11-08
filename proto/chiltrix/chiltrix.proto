@@ -7,10 +7,16 @@ option go_package = "github.com/gonzojive/heatpump/proto/chiltrix";
 
 import "google/protobuf/timestamp.proto";
 
-// A simple key-value storage service
+// Historian is a service for getting a history of the CX34's state.
 service Historian {
-  // Provides a value for each key request
-  rpc QueryStream (QueryStreamRequest) returns (stream QueryStreamResponse) {}
+    // Provides a value for each key request
+    rpc QueryStream (QueryStreamRequest) returns (stream QueryStreamResponse) {}
+}
+
+// ReadWriteService is an RPC service for controlling the CX34.
+service ReadWriteService {
+    // Change a parameter.
+    rpc SetParameter (SetParameterRequest) returns (SetParameterResponse) {}
 }
 
 // State captures the state of the heat pump at a given instant for archival purposes.
@@ -61,4 +67,23 @@ message StateDiff {
 
     // Registers that are not present in the new map.
     repeated uint32 deleted_registers = 3;
+}
+
+message SetParameterRequest {
+    // If specifies, updates the target heating mode temperature.
+    Temperature target_heating_mode_temperature = 1;
+
+    // Any other register.
+    RegisterValue register_value = 2;
+}
+
+message RegisterValue {
+    uint32 register = 1;
+    uint32 value = 2;
+}
+
+message SetParameterResponse {}
+
+message Temperature {
+    double degrees_celcius = 1;
 }

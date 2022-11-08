@@ -25,7 +25,9 @@ var (
 	root           = flag.String("root", "/", "Raspberry Pi filesystem root. Set to non-default value for testing with sshd on another computer.")
 	rs484TTYModbus = flag.String("modbus-device", "/dev/ttyUSB0", "Path to USB-to-RS485 device connected to modbus.")
 	dbDir          = flag.String("db-dir", "/home/pi/db/cx34db", "Path to a directory where badger database should be stored.")
+	restorePath    = flag.String("restore-from-backup", "", "Path to a file with backup records when restoring from backup.")
 	grpcPort       = flag.Int("grpc-port", 8082, "Port used to serve historical database values over GRPC.")
+	versionFlag    = flag.Bool("version", false, "Return the version of the program.")
 
 	markdown = goldmark.New(goldmark.WithExtensions(extension.NewTable()))
 )
@@ -33,19 +35,31 @@ var (
 const (
 	reportInterval   = time.Minute
 	snapshotInterval = time.Second * 5
+
+	version = "v0.0.1b"
 )
 
 func main() {
 	flag.Parse()
+	if *versionFlag {
+		fmt.Printf("%s\n", version)
+		return
+	}
 	if err := run(context.Background()); err != nil {
 		glog.Exitf("%v", err)
 	}
 }
 
 func run(ctx context.Context) error {
+	glog.Infof("starting cx34collector version %s", version)
 	db, err := db.Open(*dbDir)
 	if err != nil {
 		return err
+	}
+	if *restorePath != "" {
+		if err := db.RestoreBackup(*restorePath); err != nil {
+			return err
+		}
 	}
 	cxClient, err := cx34.Connect(&cx34.Params{TTYDevice: *rs484TTYModbus, Mode: cx34.Modbus})
 	if err != nil {
@@ -100,6 +114,7 @@ func run(ctx context.Context) error {
 		}
 		s := grpc.NewServer()
 		chiltrix.RegisterHistorianServer(s, db.HistorianService())
+		chiltrix.RegisterReadWriteServiceServer(s, cxClient)
 		if err := s.Serve(lis); err != nil {
 			return fmt.Errorf("failed to serve: %w", err)
 		}

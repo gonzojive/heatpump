@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "cloudconfig",
+    srcs = ["cloudconfig.go"],
+    importpath = "github.com/gonzojive/heatpump/cloud/google/cloudconfig",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//util/must",
+        "@org_golang_x_crypto//ssh",
+    ],
+)
+
+go_test(
+    name = "cloudconfig_test",
+    srcs = ["cloudconfig_test.go"],
+    embed = [":cloudconfig"],
+)

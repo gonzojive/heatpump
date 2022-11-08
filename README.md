@@ -90,3 +90,18 @@ sudo mkdir /mnt/waterpi
 sudo chown <YOUR_USERNAME> /mnt/waterpi
 sudo sshfs -o "allow_other,default_permissions,IdentityFile=/home/<YOUR_USERNAME>/.ssh/id_rsa" pi@192.168.86.22:/ /mnt/waterpi
 ```
+
+### Fan coil unit control and scheduling
+
+There is a gRPC server that can be started for getting and setting fan coil
+state. Run this command on the fan coil unit:
+
+```shell
+go run fancoil/cmd/fancoil_status/fancoil_status.go --alsologtostderr --start-server --grpc-port 8083
+```
+
+You can then run the scheduler on the device:
+
+```shell
+go run fancoil/cmd/fancoil_schedule/fancoil_schedule.go --alsologtostderr --fancoil-service localhost:8083
+```

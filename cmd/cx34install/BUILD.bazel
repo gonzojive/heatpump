@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "cx34install_lib",
+    srcs = ["cx34install.go"],
+    importpath = "github.com/gonzojive/heatpump/cmd/cx34install",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//linuxserial",
+        "@com_github_golang_glog//:glog",
+    ],
+)
+
+go_binary(
+    name = "cx34install",
+    embed = [":cx34install_lib"],
+    visibility = ["//visibility:public"],
+)

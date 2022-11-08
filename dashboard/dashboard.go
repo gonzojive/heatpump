@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -38,6 +39,7 @@ const (
 
 // Run runs a dashboard that displays information about the heat pump.
 func Run(ctx context.Context, historianAddr string, httpPort int) error {
+	glog.Infof("dialing %s...", historianAddr)
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(historianAddr, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
@@ -46,6 +48,7 @@ func Run(ctx context.Context, historianAddr string, httpPort int) error {
 	defer conn.Close()
 	c := chiltrix.NewHistorianClient(conn)
 
+	glog.Infof("starting cache...")
 	cache, closer, err := newCache(ctx, c)
 	if err != nil {
 		return err
@@ -55,6 +58,7 @@ func Run(ctx context.Context, historianAddr string, httpPort int) error {
 	server := &server{c, cache}
 	server.registerHandlers()
 
+	glog.Infof("starting up http server...")
 	return (&http.Server{Addr: fmt.Sprintf(":%d", httpPort)}).ListenAndServe()
 }
 
@@ -69,6 +73,25 @@ func (s *server) registerHandlers() {
 	http.HandleFunc("/", s.handleReport)
 
 	http.Handle("/index.js", staticHandler(mainScript))
+}
+
+func (s *server) handleSetTemp(w http.ResponseWriter, r *http.Request) {
+	writeErr := func(err error) {
+		w.Header().Set("Content-Type", textContent.headerValue())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "error: %v", err)
+	}
+	u, err := url.Parse(r.RequestURI)
+	if err != nil {
+		writeErr(err)
+		return
+	}
+	t, err := strconv.ParseFloat(u.Query().Get("target-heat"), 64)
+	if err != nil {
+		writeErr(err)
+		return
+	}
+	fmt.Fprintf(w, "set temp to %f", units.FromCelsius(t).Celsius())
 }
 
 func (s *server) handleReport(w http.ResponseWriter, r *http.Request) {
@@ -213,7 +236,7 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 
 			table.AddRow([]string{
 				s.CollectionTime().Local().Format(machineTimeLayout),
-				fmt.Sprintf("%.1f", s.ACHeatingTargetTemp().Celsius()),
+				fmt.Sprintf("%.1f", s.ACTargetTemp().Celsius()),
 				fmt.Sprintf("%.1f", s.ACInletWaterTemp().Celsius()),
 				fmt.Sprintf("%.1f", s.ACOutletWaterTemp().Celsius()),
 				fmt.Sprintf("%.1f", s.AmbientTemp().Celsius()),
@@ -231,7 +254,7 @@ func (s *server) dashboardContent(ctx context.Context, wantContentType contentTy
 			cop = fmt.Sprintf("%s (%.1fkW/%.1fkW)", cop, s.UsefulHeatRate().Kilowatts(), s.ApparentPower().Kilowatts())
 			table.AddRow([]string{
 				s.CollectionTime().Local().Format(timeLayout),
-				formatTemp(s.ACHeatingTargetTemp()),
+				formatTemp(s.ACTargetTemp()),
 				formatTemp(s.ACInletWaterTemp()),
 				formatTemp(s.ACOutletWaterTemp()),
 				formatTemp(s.AmbientTemp()),
@@ -409,6 +432,7 @@ type content struct {
 type contentType string
 
 const (
+	textContent       contentType = "text/plain; charset=UTF-8"
 	htmlContent       contentType = "text/html; charset=UTF-8"
 	markdownContent   contentType = "text/markdown; charset=UTF-8"
 	javascriptContent contentType = "text/javascript; charset=UTF-8"

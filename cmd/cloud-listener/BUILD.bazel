@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "cloud-listener_lib",
+    srcs = ["cloud_listener_main.go"],
+    importpath = "github.com/gonzojive/heatpump/cmd/cloud-listener",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//cloud/queue/queueclient",
+        "//proto/command_queue",
+        "//proto/controller",
+        "//proto/fancoil",
+        "@com_github_golang_glog//:glog",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_binary(
+    name = "cloud-listener",
+    embed = [":cloud-listener_lib"],
+    visibility = ["//visibility:public"],
+)

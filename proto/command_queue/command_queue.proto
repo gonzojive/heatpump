@@ -1,0 +1,75 @@
+// Protocol buffers for subscribing to commands to dispatch IoT devices.
+syntax = "proto3";
+
+package heatpump.command_queue;
+
+option go_package = "github.com/gonzojive/heatpump/proto/command_queue";
+
+// import "google/protobuf/timestamp.proto";
+
+// CommandQueueService is a service for getting a history of the CX34's state.
+service CommandQueueService {
+    // Listens for events
+    rpc Listen (stream ListenRequest) returns (stream ListenResponse) {}
+
+    // Lists the topics the client is eligible to subscribe to.
+    rpc ListTopics (ListTopicsRequest) returns (ListTopicsResponse) {}
+}
+
+message ListenRequest {
+    // Uniquely identifies the request within this stream.
+    string request_id = 1;
+
+    oneof request {
+        SubscribeRequest subscribe_request = 2;
+        AckRequest ack_request = 3;
+    }
+
+    message SubscribeRequest {
+        // Names of topics the client wishes to subscribe to.
+        repeated string topics = 1;
+    }
+
+    // Acknowledgement of a message.
+    message AckRequest {
+        // ID of the MessageResponse to ack.
+        string message_id = 1;
+
+        // If true, nacks the message rather than acks it.
+        bool nack = 2;
+    }
+}
+
+message ListenResponse {
+    // Identifies the request_id associated with the response.
+    string request_id = 1;
+
+    oneof response {
+        // A topic message.
+        MessageResponse message_response = 2;
+
+        AckResponse ack_response = 3;
+    }
+
+    // Confirmation that an AckRequest was processed.
+    message AckResponse {
+        // Unique id of the the message that was acked.
+        string id = 1;
+    }
+}
+
+// MessageResponse contains a single message on the topic.
+message MessageResponse {
+    // Unique id of the the message.
+    string id = 1;
+    
+    // Contents of the message.
+    bytes payload = 2;
+}
+
+message ListTopicsRequest {}
+
+message ListTopicsResponse {
+    // The names of the topics the client is allowed to stream.
+    repeated string topics = 1;
+}

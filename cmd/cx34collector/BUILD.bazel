@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "cx34collector_lib",
+    srcs = ["cx34collector.go"],
+    importpath = "github.com/gonzojive/heatpump/cmd/cx34collector",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//cx34",
+        "//db",
+        "//proto/chiltrix",
+        "//tempsensor",
+        "@com_github_golang_glog//:glog",
+        "@com_github_yuin_goldmark//:goldmark",
+        "@com_github_yuin_goldmark//extension",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_x_sync//errgroup",
+    ],
+)
+
+go_binary(
+    name = "cx34collector",
+    embed = [":cx34collector_lib"],
+    visibility = ["//visibility:public"],
+)

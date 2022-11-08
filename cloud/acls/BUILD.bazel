@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "acls",
+    srcs = [
+        "acls.go",
+        "authservice.go",
+    ],
+    embedsrcs = ["client-signer-cert-authority-cert.pem"],
+    importpath = "github.com/gonzojive/heatpump/cloud/acls",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cloud/google/cloudconfig",
+        "//proto/controller",
+        "//util/must",
+        "@com_github_golang_glog//:glog",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_samber_lo//:lo",
+        "@com_google_cloud_go_secretmanager//apiv1",
+        "@com_google_cloud_go_secretmanager//apiv1/secretmanagerpb",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//metadata",
+        "@org_golang_google_grpc//peer",
+        "@org_golang_google_grpc//status",
+        "@org_golang_google_protobuf//types/known/timestamppb",
+        "@org_golang_x_crypto//ssh",
+    ],
+)

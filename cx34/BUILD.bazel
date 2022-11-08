@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cx34",
+    srcs = [
+        "cx34.go",
+        "cx34_diffs.go",
+        "cx34_registers.go",
+    ],
+    importpath = "github.com/gonzojive/heatpump/cx34",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//mdtable",
+        "//proto/chiltrix",
+        "//units",
+        "@com_github_goburrow_modbus//:modbus",
+        "@com_github_goburrow_serial//:serial",
+        "@com_github_golang_glog//:glog",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_howeyc_crc16//:crc16",
+        "@com_github_inhies_go_bytesize//:go-bytesize",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_protobuf//types/known/timestamppb",
+        "@org_uber_go_multierr//:multierr",
+    ],
+)

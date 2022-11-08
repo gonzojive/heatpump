@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "fancoil_status_lib",
+    srcs = ["fancoil_status.go"],
+    importpath = "github.com/gonzojive/heatpump/fancoil/cmd/fancoil_status",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//fancoil",
+        "//proto/fancoil",
+        "@com_github_golang_glog//:glog",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//reflection",
+    ],
+)
+
+go_binary(
+    name = "fancoil_status",
+    embed = [":fancoil_status_lib"],
+    visibility = ["//visibility:public"],
+)

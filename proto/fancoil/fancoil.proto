@@ -1,0 +1,236 @@
+// Protocol buffers for storing Chiltrix CX34 data.
+syntax = "proto3";
+
+package fancoil;
+
+option go_package = "github.com/gonzojive/heatpump/proto/fancoil";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.EnumValueOptions {
+    ModbusEnumValueOptions modbus_options = 60000;
+
+    // Implementation note about extension range: see
+    // https://developers.google.com/protocol-buffers/docs/proto#customoptions.
+}
+
+message ModbusEnumValueOptions {
+    // The modbus encoding of the value as a big endian uint16.
+    uint32 register_value = 1;
+}
+
+// FanCoilService is an RPC service for controlling the CX34.
+service FanCoilService {
+    // Get a snapshot of the state of a single fan coil unit.
+    rpc GetState (GetStateRequest) returns (GetStateResponse) {}
+
+    // Set some parameters of the fan coil unit.
+    rpc SetState (SetStateRequest) returns (SetStateResponse) {}
+}
+
+message GetStateRequest {
+    // The name of the fan coil unit. Empty for default.
+    string fancoil_name = 1;
+}
+
+message GetStateResponse {
+    State state = 1;
+    RawRegisterSnapshot raw_snapshot = 2;
+}
+
+// RawRegisterSnapshot holds the values of all of the known fan coil modbus
+// registers for archival purposes.
+message RawRegisterSnapshot {
+    // The actual values are 16 bit. Protobuf only supports 32-bit values,
+    // otherwise we would use uint16.
+    //
+    // The key of the map will be an entry from the RegisterName enum if it is a
+    // known value.
+    map<uint32, uint32> raw_values = 1;
+}
+
+// State holds a parsed version of the fan coil's RegisterSnapshot.
+message State {
+    // The timestamp when the state was collected.
+    .google.protobuf.Timestamp snapshot_time = 1;
+
+    // Parsed register values.
+    PowerStatus power_status = 2; // 28301
+    Mode mode = 3; // 28302
+    Temperature room_temperature = 4; // readonly
+    Temperature coil_temperature = 5; // readonly
+    FanSetting preference_fan_setting = 6;
+    FanSetting current_fan_setting = 7; // readonly
+    FanSpeed fan_speed = 8; // readonly
+
+    // Setpoint for heating mode.
+    Temperature heating_target_temperature = 9;
+    
+    // Setpoint for cooling mode.
+    Temperature cooling_target_temperature = 10;
+
+    Temperature anti_cooling_target_temperature = 11;
+    Temperature auto_mode_heating_target_temperature = 12;
+    Temperature auto_mode_cooling_target_temperature = 13;
+
+    // User configurable display teperature units.
+    TemperatureUnits display_temperature_units = 14;
+    
+    // Whether to use floor heating.
+    FloorHeatingMode floor_heating_mode = 15;
+
+    // Modbus address of the fan coil unit. 0-99.
+    ModbusAddress modbus_address = 16;
+
+    // Whether the electromechanical bypass valve is active or not.
+    ValveState valve_state = 17;
+    // Whether the electromechanical bypass valve is installed and should be
+    // used. When the valve is "on" it means the 
+    ValveSetting valve_setting = 18;
+}
+
+message SetStateRequest {
+    // The name of the fan coil unit. Empty for default. Otherwise, the modbus
+    // address formatted as a 10-base integer.
+    string fancoil_name = 1;
+
+    PowerStatus power_status = 2;
+    FanSetting preference_fan_setting = 6;
+
+    // Setpoint for heating mode.
+    Temperature heating_target_temperature = 9;
+    
+    // Setpoint for cooling mode.
+    Temperature cooling_target_temperature = 10;
+
+    // Whether the electromechanical bypass valve is installed and should be
+    // used. When the valve is "on" it means the 
+    ValveSetting valve_setting = 18;
+}
+
+message ModbusAddress {
+    // Address of a modbus device.
+    uint32 address = 1;
+}
+
+message SetStateResponse {
+}
+
+enum TemperatureUnits {
+    TEMPERATURE_UNITS_UNSPECIFIED = 0;
+    TEMPERATURE_UNITS_CELCIUS = 1;
+    TEMPERATURE_UNITS_FAHRENHEIT = 2;
+}
+
+enum FloorHeatingMode {
+    FLOOR_HEATING_MODE_UNSPECIFIED = 0;
+    FLOOR_HEATING_MODE_ON = 1;
+    FLOOR_HEATING_MODE_OFF = 2;
+}
+
+enum ValveState {
+    VALVE_STATE_UNSPECIFIED = 0;
+
+    // The valve is directing water to not go through the heat exchange coils of
+    // the fan coil unit.
+    VALVE_STATE_ON = 1;
+
+    // The valve is directing water to not go through the fan coil unit.
+    VALVE_STATE_OFF = 2;
+}
+
+enum ValveSetting {
+    VALVE_SETTING_UNSPECIFIED = 0;
+    // The valve is installed and enabled.
+    VALVE_SETTING_ENABLED = 1
+        [(modbus_options).register_value = 1];
+    
+    // The valve is not installed or installed and should not be used.
+    VALVE_SETTING_DISABLED = 2
+        [(modbus_options).register_value = 0];
+}
+
+// RegisterName is an enum of all the known registers of the fan coil units.
+//
+// See fancoil/chiltrix-htp-fancoil-documentation.md for more details about
+// the encodings of the registers.
+enum RegisterName {
+    REGISTER_NAME_UNSPECIFIED = 0;
+    // ENUM = Address	Function Code	Content	Description
+
+    // Holding registers: Can be read and set.
+    REGISTER_NAME_ON_OFF =  28301; // 28301 03/10	On/Off	0=off,1=on
+    REGISTER_NAME_MODE =  28302; // 28302 03/10	Mode	0～auto；1～cooling;2～dehumidification；3～ventilate；4～heating；
+    REGISTER_NAME_FANSPEED =  28303; // 28303 03/10	Fanspeed	"2～low speed；3～medium speed； 4～high speed； 6～auto"
+    REGISTER_NAME_TIMER_OFF1 =  28306; // 28306 03/10	Timer off	
+    REGISTER_NAME_TIMER_OFF2 =  28307; // 28307 03/10	Timer off	
+    REGISTER_NAME_MAX_SET_TEMPERATURE =  28308; // 28308 03/10	Max. set temperature	（-9～96）℃
+    REGISTER_NAME_MIN_SET_TEMPERATURE =  28309; // 28309 03/10	Min. set temperature	（-9～96）℃
+    REGISTER_NAME_COOLING_SET_TEMPERATURE =  28310; // 28310 03/10	Cooling set temperature	
+    REGISTER_NAME_HEATING_SET_TEMPERATURE =  28311; // 28311 03/10	heating set temperature	
+    REGISTER_NAME_COOLING_SET_TEMPERATURE_AUTO =  28312; // 28312 03/10	Cooling set temperature at auto mode	
+    REGISTER_NAME_HEATING_SET_TEMPERATURE_AUTO =  28313; // 28313 03/10	heating set temperature at auto mode	
+    REGISTER_NAME_ANTI_COOLING_WIND_SETTING_TEMPERATURE =  28314; // 28314 03/10	Anti-cooling wind setting temperature	（5～40）℃
+    REGISTER_NAME_START_ANTI_HOT_WIND =  28315; // 28315 03/10	Whether to start anti-hot wind function	（1-Yes；0-No）
+    REGISTER_NAME_START_ULTRA_LOW_WIND =  28316; // 28316 03/10	Whether to start ultra-low wind function	（1-Yes；0-No）
+    REGISTER_NAME_USE_VALVE =  28317; // 28317 03/10	Whether to use vavle	（1-Yes；0-No）
+    REGISTER_NAME_USE_FLOOR_HEATING =  28318; // 28318 03/10	Whether to use floor heating	（1-Yes；0-No）
+    REGISTER_NAME_USE_FAHRENHEIT =  28319; // 28319 03/10	Whether to use Fahrenheit	（1-℉；0-℃）
+    REGISTER_NAME_MASTER_SLAVE =  28320; // 28320 03/10	Master/Slave	（1-Yes；0-No）
+    REGISTER_NAME_UNIT_ADDRESS =  28321; // 28321 03/10	Unit address	（1～99）The default value is 15
+
+    // Input registers: read only.
+    REGISTER_NAME_ROOM_TEMPERATURE =  46801; // 46801 04	Room temperature	
+    REGISTER_NAME_COIL_TEMPERATURE =  46802; // 46802 04	Coil temperature	
+    REGISTER_NAME_CURRENT_FAN_SPEED =  46803; // 46803 04	 Current fan  speed	0  Off；1 Ultra-low speed； 2  Low speed；3   Medium speed；4  High speed；5   Top speed；6 Auto
+    REGISTER_NAME_FAN_RPM =  46804; // 46804 04	Fan revolution	0～2000 （rpm）
+    REGISTER_NAME_VALVE_ON_OFF =  46805; // 46805 04	Electromagnetic Valve	0  Off；   1  On
+    REGISTER_NAME_REMOTE_ON_OFF =  46806; // 46806 04	Remote on/off	0  Open;1 close
+    REGISTER_NAME_SIMULATION_SIGNAL =  46807; // 46807 04	Simulation signal	0  (The main engine needs to be switched to non-heating mode)；1  (The main engine needs to be switched to heating mode)
+    REGISTER_NAME_FAN_SPEED_SIGNAL_FEEDBACK_FAULT =  46808; // 46808 04	Fan speed signal feedback fault	（1-Yes；0-No）
+    REGISTER_NAME_ROOM_TEMPERATURE_SENSOR_FAULT =  46809; // 46809 04	Room temperature sensor fault	（1-Yes；0-No）
+    REGISTER_NAME_COIL_TEMPERATURE_SENSOR_FAULT =  46810; // 46810 04	Coil temperature sensor fault	（1-Yes；0-No）
+}
+
+message Temperature {
+    float degrees_celcius = 1;
+}
+
+enum FanSetting {
+    FAN_SETTING_UNSPECIFIED = 0;
+    FAN_SETTING_OFF = 7
+        [(modbus_options).register_value = 0];
+    FAN_SETTING_ULTRA_LOW = 1
+        [(modbus_options).register_value = 1];
+    FAN_SETTING_LOW = 2
+        [(modbus_options).register_value = 2];
+    FAN_SETTING_MEDIUM = 3
+        [(modbus_options).register_value = 3];
+    FAN_SETTING_HIGH = 4
+        [(modbus_options).register_value = 4];
+    FAN_SETTING_MAX = 5
+        [(modbus_options).register_value = 5];
+    FAN_SETTING_AUTO = 6
+        [(modbus_options).register_value = 6];
+}
+
+message FanSpeed {
+    // Rotations per minute for the fan.
+    int64 rpm = 1;
+}
+
+enum PowerStatus {
+    POWER_STATUS_UNSPECIFIED = 0;
+    POWER_STATUS_ON = 1;
+    POWER_STATUS_OFF = 2;
+}
+
+enum Mode {
+    MODE_UNSPECIFIED = 0;
+    MODE_AUTO = 5; // actual encoded value = 0
+    MODE_COOLING = 1;
+    MODE_DEHUMIDIFICATION = 2;
+    MODE_VENTILATION = 3;
+    MODE_HEATING = 4;
+}

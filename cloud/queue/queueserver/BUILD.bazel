@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "queueserver",
+    srcs = [
+        "queueserver.go",
+        "queueserver_listeners.go",
+    ],
+    importpath = "github.com/gonzojive/heatpump/cloud/queue/queueserver",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cloud/acls",
+        "//proto/command_queue",
+        "//util/lockutil",
+        "@com_github_golang_glog//:glog",
+        "@com_google_cloud_go_pubsub//:pubsub",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
+        "@org_golang_x_sync//errgroup",
+    ],
+)

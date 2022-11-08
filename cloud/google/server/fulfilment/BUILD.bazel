@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "fulfilment",
+    srcs = [
+        "command_publisher.go",
+        "fulfilment.go",
+    ],
+    importpath = "github.com/gonzojive/heatpump/cloud/google/server/fulfilment",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cloud/google/cloudconfig",
+        "//proto/controller",
+        "//proto/fancoil",
+        "@com_github_golang_glog//:glog",
+        "@com_github_rmrobinson_google_smart_home_action_go//:go_default_library",
+        "@com_google_cloud_go_pubsub//:pubsub",
+        "@org_golang_google_protobuf//proto",
+        "@org_uber_go_zap//:zap",
+    ],
+)

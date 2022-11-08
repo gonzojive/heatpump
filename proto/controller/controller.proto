@@ -1,0 +1,105 @@
+// Protocol buffers for the controller program that interfaces
+// with the heat pump and fan coil units.
+syntax = "proto3";
+
+package controller;
+
+// Consider adding gazelle:proto_import_prefix github.com/gonzojive/heatpump
+import "proto/fancoil/fancoil.proto";
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/gonzojive/heatpump/proto/controller";
+
+
+// StateService is an RPC service for storing and retrieving the state of a set
+// of devices as well as configuration values.
+//
+// A StateService backend is intended to be hosted in the cloud, and a
+// controller application (right now the bazel target //cmd/cloud-listener) will
+// communicate with the state service to obtain the desired state.
+//
+// Identity of the client is esstablished using TLS client certificates (see the
+// "acls" package).
+service StateService {
+    // Get a snapshot of the state of a single fan coil unit.
+    rpc GetDeviceState (GetDeviceStateRequest) returns (DeviceState) {}
+
+    // Set some parameters of a device.
+    rpc SetDeviceState (SetDeviceStateRequest) returns (SetDeviceStateResponse) {}
+}
+
+// Requests the state of a device .
+message GetDeviceStateRequest {
+    // The name of the device.
+    //
+    // For fancoils, looks like "fan-coils/[id]".
+    string name = 1;
+}
+
+// Describes the state of a fan coil unit or other device managed by the
+// controller.
+message DeviceState {
+    // The name of the device.
+    //
+    // For fancoils, looks like "fan-coils/[id]".
+    string name = 1;
+
+    // If the device is a fan coil unit, the state of the fan coil unit.
+    fancoil.State fancoil_state = 2;
+}
+
+// Sets the state of the device.
+message SetDeviceStateRequest {
+    DeviceState state = 1;
+}
+
+message SetDeviceStateResponse {}
+
+message Configuration {
+    string cloud_iot_device_name = 1;
+
+    // Path to USB-to-RS485 device connected to modbus to use for talking to the heat pump (CX34).
+    string heatpump_modbus_device_path = 2;
+
+    // Path to USB-to-RS485 device connected to modbus to use for talking to the heat pump (CX34).
+    string fan_coils_modbus_device_path = 3;
+}
+
+// Command is used to issue commands to the controller from pub/sub.
+message Command {
+    oneof command {
+        fancoil.SetStateRequest set_state_request = 1;
+    }
+}
+
+// A wire-encoded version of this proto is passed from the device to the server
+// to authenticate.
+message DeviceAccessToken {
+    string user_id = 1;
+    google.protobuf.Timestamp expiration = 2;
+
+
+    // Signature provided by the server of the wire-encoded message without the
+    // signature field.
+    string signature = 3;
+}
+
+service AuthService {
+    // TODO(reddaly): Replace this with a handshake where the client signs the
+    // server's challenge to prove identity, and the server returns a signed
+    // token.
+    // https://www.cloudflare.com/learning/ssl/what-happens-in-a-tls-handshake/
+
+    // Get a snapshot of the state of a single fan coil unit.
+    rpc ExtendToken (ExtendTokenRequest) returns (ExtendTokenResponse) {}
+}
+
+message ExtendTokenRequest {
+    string token = 1;
+}
+
+message ExtendTokenResponse {
+    string refreshed_token = 1;
+    google.protobuf.Timestamp expiration = 2;
+}

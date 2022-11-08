@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "protocol-analyzer_lib",
+    srcs = ["protocol-analyzer.go"],
+    importpath = "github.com/gonzojive/heatpump/cmd/protocol-analyzer",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//omron",
+        "@com_github_golang_glog//:glog",
+        "@com_github_yuin_goldmark//:goldmark",
+        "@com_github_yuin_goldmark//extension",
+    ],
+)
+
+go_binary(
+    name = "protocol-analyzer",
+    embed = [":protocol-analyzer_lib"],
+    visibility = ["//visibility:public"],
+)

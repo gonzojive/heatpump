@@ -1,0 +1,44 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+
+go_library(
+    name = "stateservice_lib",
+    srcs = ["stateservice_main.go"],
+    importpath = "github.com/gonzojive/heatpump/cmd/stateservice",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//cloud/acls",
+        "//cloud/google/cloudconfig",
+        "//cloud/stateservice",
+        "//proto/controller",
+        "//util/grpcserverutil",
+        "@com_github_golang_glog//:glog",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//reflection",
+        "@org_golang_x_sync//errgroup",
+    ],
+)
+
+go_binary(
+    name = "stateservice",
+    embed = [":stateservice_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_image(
+    name = "image",
+    embed = [":stateservice_lib"],
+    # srcs = ["heatpump-oauth-server.go"],
+    importpath = "github.com/gonzojive/heatpump/cloud/google/server/cmd/heatpump-oauth-server",
+)
+
+container_push(
+    name = "push-image",
+    format = "Docker",
+    image = ":image",
+    registry = "us-west4-docker.pkg.dev",
+    repository = "redapps/heatpump-testing/stateservice-image",
+    tag = "main",
+)

@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "queueclient",
+    srcs = ["queueclient.go"],
+    importpath = "github.com/gonzojive/heatpump/cloud/queue/queueclient",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/command_queue",
+        "@com_github_golang_glog//:glog",
+    ],
+)

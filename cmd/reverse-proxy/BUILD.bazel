@@ -1,0 +1,33 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+
+go_library(
+    name = "reverse-proxy_lib",
+    srcs = ["reverse-proxy.go"],
+    importpath = "github.com/gonzojive/heatpump/cmd/reverse-proxy",
+    visibility = ["//visibility:private"],
+    deps = ["@com_github_golang_glog//:glog"],
+)
+
+go_binary(
+    name = "reverse-proxy",
+    embed = [":reverse-proxy_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_image(
+    name = "image",
+    embed = [":reverse-proxy_lib"],
+    # srcs = ["heatpump-oauth-server.go"],
+    importpath = "github.com/gonzojive/heatpump/cloud/google/server/cmd/heatpump-oauth-server",
+)
+
+container_push(
+    name = "push-image",
+    format = "Docker",
+    image = ":image",
+    registry = "us-west4-docker.pkg.dev",
+    repository = "redapps/heatpump-testing/reverse-proxy-image",
+    tag = "main",
+)

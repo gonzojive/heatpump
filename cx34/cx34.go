@@ -2,6 +2,7 @@
 package cx34
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -14,8 +15,11 @@ import (
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/mdtable"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
+	"github.com/gonzojive/heatpump/units"
 	"github.com/howeyc/crc16"
 	"go.uber.org/multierr"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -58,6 +62,7 @@ type Params struct {
 
 // Client is used to communicate with the Chiltrix CX34 heat pump.
 type Client struct {
+	chiltrix.ReadWriteServiceServer
 	c modbus.Client
 }
 
@@ -102,7 +107,7 @@ func Connect(p *Params) (*Client, error) {
 	}
 
 	client := modbus.NewClient(handler)
-	c := &Client{client}
+	c := &Client{c: client}
 
 	if err := c.CheckConnection(); err != nil {
 		return nil, err
@@ -136,6 +141,52 @@ func (c *Client) ReadState() (*State, error) {
 		}
 	}
 	return &State{time.Now(), m}, nil
+}
+
+// SetParameter sets the target heating temperature for the CX34.
+func (c *Client) SetParameter(ctx context.Context, req *chiltrix.SetParameterRequest) (*chiltrix.SetParameterResponse, error) {
+	if req.GetTargetHeatingModeTemperature() != nil {
+		if err := c.setHeatingTemp(units.FromCelsius(req.GetTargetHeatingModeTemperature().GetDegreesCelcius())); err != nil {
+			return nil, grpc.Errorf(codes.Internal, "error setting temperature: %v", err)
+		}
+	}
+	if req.GetRegisterValue() != nil {
+		if v := req.GetRegisterValue().GetRegister(); v > math.MaxUint16 {
+			return nil, grpc.Errorf(codes.InvalidArgument, "invalid register %d is out of range", v)
+		}
+		if v := req.GetRegisterValue().GetValue(); v > math.MaxUint16 {
+			return nil, grpc.Errorf(codes.InvalidArgument, "invalid register value %d is out of range", v)
+		}
+		if err := c.setRegisterValue(uint16(req.RegisterValue.GetRegister()), uint16(req.RegisterValue.GetValue())); err != nil {
+			return nil, grpc.Errorf(codes.Internal, "error setting register: %v", err)
+		}
+	}
+	return &chiltrix.SetParameterResponse{}, nil
+}
+
+// setHeatingTemp sets the target heating temperature for the CX34.
+func (c *Client) setHeatingTemp(t units.Temperature) error {
+	deg := t.Celsius()
+	if deg < 5 || deg > 70 {
+		return fmt.Errorf("temperature is out of range: %v", t)
+	}
+	registerValue := uint16(math.Round(t.Celsius()))
+
+	res, err := c.c.WriteSingleRegister(TargetACHeatingModeTemp.uint16(), registerValue)
+	if err != nil {
+		return fmt.Errorf("WriteSingleRegister error: %w (returned bytes %v)", err, res)
+	}
+	glog.Infof("set target heating temperature to %.0f°C/%.0f°F", t.Celsius(), t.Fahrenheit())
+	return nil
+}
+
+func (c *Client) setRegisterValue(reg, value uint16) error {
+	res, err := c.c.WriteSingleRegister(reg, value)
+	if err != nil {
+		return fmt.Errorf("WriteSingleRegister error: %w (returned bytes %v)", err, res)
+	}
+	glog.Infof("set register value %d to %d; got response %v", reg, value, res)
+	return nil
 }
 
 // CheckConnection attempts to connect to the heat pump and returns an error if the connection fails.
@@ -324,3 +375,7 @@ func decodeFrame(adu []byte) (*modbus.ProtocolDataUnit, error) {
 		Data:         adu[2 : length-2],
 	}, nil
 }
+
+// func uint16ToBytes(i uint16) []byte {
+// 	return []byte{(i & 0xFF00) >> 8, i & 0x00FF)}
+// }
