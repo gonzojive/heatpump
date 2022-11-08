@@ -2,6 +2,31 @@ provider "google" {
   project = var.project
 }
 
+# Services (APIs) to enable
+resource "google_project_service" "artifactregistry" {
+  project = var.project
+  service = "artifactregistry.googleapis.com"
+
+  timeouts {
+    create = "30m"
+    update = "40m"
+  }
+
+  disable_dependent_services = true
+}
+
+resource "google_project_service" "cloudrun" {
+  project = var.project
+  service = "run.googleapis.com"
+
+  timeouts {
+    create = "30m"
+    update = "40m"
+  }
+
+  disable_dependent_services = true
+}
+
 # resource "google_cloud_run_service" "google_actions_http_endpoint" {
 #   name     = "google-actions-http-endpoint"
 #   location = "us-west4"
@@ -16,7 +41,7 @@ provider "google" {
 #   template {
 #     spec {
 #       containers {
-#         image = "us-west4-docker.pkg.dev/redapps/heatpump-testing/reverse-proxy-image@sha256:981653a39aa265d670c04693f0660a6646068f32933ad26c0885637120a87cfc"
+#         image = "us-west4-docker.pkg.dev/heatpump-dev/heatpump-testing/reverse-proxy-image@sha256:981653a39aa265d670c04693f0660a6646068f32933ad26c0885637120a87cfc"
 #       }
 #     }
 #   }
@@ -36,7 +61,7 @@ provider "google" {
 #   template {
 #     spec {
 #       containers {
-#         image = "us-west4-docker.pkg.dev/redapps/heatpump-testing/command-queue-service-image@sha256:50311f03fdc452c56055793e871a2e2ff96cf793fedb148043884e6858899ae2"
+#         image = "us-west4-docker.pkg.dev/heatpump-dev/heatpump-testing/command-queue-service-image@sha256:50311f03fdc452c56055793e871a2e2ff96cf793fedb148043884e6858899ae2"
 #         # Enable HTTP/2 so gRPC works.
 #         # https://cloud.google.com/run/docs/configuring/http2
 #         ports {
@@ -68,7 +93,7 @@ provider "google" {
 #   template {
 #     spec {
 #       containers {
-#         image = "us-west4-docker.pkg.dev/redapps/heatpump-testing/stateservice-image@sha256:3b80c5732a7f350ef938b88129e1cceb45745add2cbae73bc817d35288209df4"
+#         image = "us-west4-docker.pkg.dev/heatpump-dev/heatpump-testing/stateservice-image@sha256:3b80c5732a7f350ef938b88129e1cceb45745add2cbae73bc817d35288209df4"
 #         # Enable HTTP/2 so gRPC works.
 #         # https://cloud.google.com/run/docs/configuring/http2
 #         ports {

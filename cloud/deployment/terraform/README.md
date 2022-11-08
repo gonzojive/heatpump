@@ -13,7 +13,8 @@ CLOUDBUILD_SA="$(gcloud projects describe $PROJECT_ID     --format 'value(projec
 gsutil mb gs://${PROJECT_ID}-tfstate
 gsutil versioning set on gs://${PROJECT_ID}-tfstate
 
-gcloud services enable cloudbuild.googleapis.com compute.googleapis.com
+gcloud services enable cloudbuild.googleapis.com compute.googleapis.com 
+# artifactregistry.googleapis.com
 
 # I had to enable one other API manually for Terraform to work. I forget which.
 

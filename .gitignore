@@ -4,3 +4,4 @@ bazel-testlogs
 bazel-heatpump
 secrets
 .terraform
+.terraform.lock.hcl

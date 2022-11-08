@@ -22,7 +22,7 @@ type Params struct {
 
 func DefaultParams() *Params {
 	return &Params{
-		GCPProject:                         "redapps",
+		GCPProject:                         "heatpump-dev",
 		CommandsSubscriptionName:           "queueserver_pull_1",
 		DeviceAccessTokenSecretVersionName: "projects/531489193973/secrets/my-key-nov6/versions/latest",
 		DeviceTokenSigningKey:              must.Value(parseAuthorizedKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDVxkIyR83R1KwFHqrY+ymjyql5yEX1mTgqMrjfedFQEyybhvcQmVW9S54kgLY7htxa3JCj/0jhxPVB6uzBXvw6NkAjAfjdEIJ8koHl2X1IsMRVWpIGe4jLcF0okktAe9rztKQ/I/hXvbKLF6gEq0GiJkVMhqAxRNX/gCniTSAvIv29aYiQAI9GNWbN7rgm754v0q/UWp0U4akgUtWl/I2zrDX1tztLWz/MZWnHKaO218qTvmVfk4N1Z0iTZ8KQs7mEA06u8CzbEd3P7+j+pjEOS8iBaRHLt76bm7PFp3eQOpRSm7C36BOHmYtIEWr24shU2IQNkmD8jDu4ibFHFFzH")),

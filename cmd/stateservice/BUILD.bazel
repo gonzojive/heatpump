@@ -39,6 +39,6 @@ container_push(
     format = "Docker",
     image = ":image",
     registry = "us-west4-docker.pkg.dev",
-    repository = "redapps/heatpump-testing/stateservice-image",
+    repository = "heatpump-dev/heatpump-testing/stateservice-image",
     tag = "main",
 )
