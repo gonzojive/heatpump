@@ -42,7 +42,7 @@ resource "google_artifact_registry_repository" "my-repo" {
 
 # resource "google_cloud_run_service" "google_actions_http_endpoint" {
 #   name     = "google-actions-http-endpoint"
-#   location = locals.gcp_location
+#   location = local.gcp_location
 
 #   metadata {
 #     annotations = {
@@ -62,7 +62,7 @@ resource "google_artifact_registry_repository" "my-repo" {
 
 # resource "google_cloud_run_service" "command_queue_service" {
 #   name     = "command-queue-service"
-#   location = locals.gcp_location
+#   location = local.gcp_location
 
 #   metadata {
 #     annotations = {
@@ -94,7 +94,7 @@ resource "google_artifact_registry_repository" "my-repo" {
 
 resource "google_cloud_run_service" "state_service" {
   name     = "state-service"
-  location = locals.gcp_location
+  location = local.gcp_location
 
   metadata {
     annotations = {
