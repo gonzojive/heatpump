@@ -39,6 +39,6 @@ container_push(
     format = "Docker",
     image = ":go_image",
     registry = "us-west4-docker.pkg.dev",
-    repository = "heatpump-dev/heatpump-testing/hello-world-image",
+    repository = "heatpump-dev/project-images/hello-world-image",
     tag = "tag1",
 )

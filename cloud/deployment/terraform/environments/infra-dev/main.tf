@@ -1,3 +1,7 @@
+locals {
+  gcp_location = "us-west4"
+}
+
 provider "google" {
   project = var.project
 }
@@ -27,9 +31,18 @@ resource "google_project_service" "cloudrun" {
   disable_dependent_services = true
 }
 
+# Artifact storage of container images.
+
+resource "google_artifact_registry_repository" "my-repo" {
+  location      = local.gcp_location
+  repository_id = "project-images"
+  description   = "Images pushed through bazel rules."
+  format        = "DOCKER"
+}
+
 # resource "google_cloud_run_service" "google_actions_http_endpoint" {
 #   name     = "google-actions-http-endpoint"
-#   location = "us-west4"
+#   location = locals.gcp_location
 
 #   metadata {
 #     annotations = {
@@ -41,7 +54,7 @@ resource "google_project_service" "cloudrun" {
 #   template {
 #     spec {
 #       containers {
-#         image = "us-west4-docker.pkg.dev/heatpump-dev/heatpump-testing/reverse-proxy-image@sha256:981653a39aa265d670c04693f0660a6646068f32933ad26c0885637120a87cfc"
+#         image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/reverse-proxy-image@sha256:981653a39aa265d670c04693f0660a6646068f32933ad26c0885637120a87cfc"
 #       }
 #     }
 #   }
@@ -49,7 +62,7 @@ resource "google_project_service" "cloudrun" {
 
 # resource "google_cloud_run_service" "command_queue_service" {
 #   name     = "command-queue-service"
-#   location = "us-west4"
+#   location = locals.gcp_location
 
 #   metadata {
 #     annotations = {
@@ -61,7 +74,7 @@ resource "google_project_service" "cloudrun" {
 #   template {
 #     spec {
 #       containers {
-#         image = "us-west4-docker.pkg.dev/heatpump-dev/heatpump-testing/command-queue-service-image@sha256:50311f03fdc452c56055793e871a2e2ff96cf793fedb148043884e6858899ae2"
+#         image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/command-queue-service-image@sha256:50311f03fdc452c56055793e871a2e2ff96cf793fedb148043884e6858899ae2"
 #         # Enable HTTP/2 so gRPC works.
 #         # https://cloud.google.com/run/docs/configuring/http2
 #         ports {
@@ -81,7 +94,7 @@ resource "google_project_service" "cloudrun" {
 
 # resource "google_cloud_run_service" "state_service" {
 #   name     = "state-service"
-#   location = "us-west4"
+#   location = locals.gcp_location
 
 #   metadata {
 #     annotations = {
@@ -93,7 +106,7 @@ resource "google_project_service" "cloudrun" {
 #   template {
 #     spec {
 #       containers {
-#         image = "us-west4-docker.pkg.dev/heatpump-dev/heatpump-testing/stateservice-image@sha256:3b80c5732a7f350ef938b88129e1cceb45745add2cbae73bc817d35288209df4"
+#         image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image@sha256:3b80c5732a7f350ef938b88129e1cceb45745add2cbae73bc817d35288209df4"
 #         # Enable HTTP/2 so gRPC works.
 #         # https://cloud.google.com/run/docs/configuring/http2
 #         ports {
