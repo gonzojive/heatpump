@@ -92,37 +92,38 @@ resource "google_artifact_registry_repository" "my-repo" {
 #   }
 # }
 
-# resource "google_cloud_run_service" "state_service" {
-#   name     = "state-service"
-#   location = locals.gcp_location
+resource "google_cloud_run_service" "state_service" {
+  name     = "state-service"
+  location = locals.gcp_location
 
-#   metadata {
-#     annotations = {
-#       "run.googleapis.com/client-name" = "terraform"
-#       "run.googleapis.com/ingress"     = "all"
-#     }
-#   }
+  metadata {
+    annotations = {
+      "run.googleapis.com/client-name" = "terraform"
+      "run.googleapis.com/ingress"     = "all"
+    }
+  }
 
-#   template {
-#     spec {
-#       containers {
-#         image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image@sha256:3b80c5732a7f350ef938b88129e1cceb45745add2cbae73bc817d35288209df4"
-#         # Enable HTTP/2 so gRPC works.
-#         # https://cloud.google.com/run/docs/configuring/http2
-#         ports {
-#           name           = "h2c"
-#           container_port = 8089
-#         }
-#       }
-#     }
+  template {
+    spec {
+      containers {
+        # bazel run //cmd/stateservice:push-image
+        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image@sha256:0a480e08794147437170dd0c0af7aa92e953bec99d852e943ceb45b3cfd3b1a9"
+        # Enable HTTP/2 so gRPC works.
+        # https://cloud.google.com/run/docs/configuring/http2
+        ports {
+          name           = "h2c"
+          container_port = 8089
+        }
+      }
+    }
 
-#     metadata {
-#       annotations = {
-#         "autoscaling.knative.dev/maxScale" = "1"
-#       }
-#     }
-#   }
-# }
+    metadata {
+      annotations = {
+        "autoscaling.knative.dev/maxScale" = "1"
+      }
+    }
+  }
+}
 
 data "google_iam_policy" "noauth" {
   binding {
