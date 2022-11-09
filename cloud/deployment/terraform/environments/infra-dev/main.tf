@@ -31,6 +31,18 @@ resource "google_project_service" "cloudrun" {
   disable_dependent_services = true
 }
 
+resource "google_project_service" "secretmanager" {
+  project = var.project
+  service = "secretmanager.googleapis.com"
+
+  timeouts {
+    create = "30m"
+    update = "40m"
+  }
+
+  disable_dependent_services = true
+}
+
 # Artifact storage of container images.
 
 resource "google_artifact_registry_repository" "my-repo" {
@@ -127,6 +139,39 @@ resource "google_cloud_run_service" "state_service" {
   }
 }
 
+# resource "google_cloud_run_service" "auth_service" {
+#   name     = "auth-service"
+#   location = local.gcp_location
+
+#   metadata {
+#     annotations = {
+#       "run.googleapis.com/client-name" = "terraform"
+#       "run.googleapis.com/ingress"     = "all"
+#     }
+#   }
+
+#   template {
+#     spec {
+#       containers {
+#         # bazel run //cmd/authservice:push-image
+#         image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/authservice-image@sha256:7b8df3707487ca9f7fafd7d2b9f1514ac8fd71b55b33e311cc5dd44ae283068b"
+#         # Enable HTTP/2 so gRPC works.
+#         # https://cloud.google.com/run/docs/configuring/http2
+#         ports {
+#           name           = "h2c"
+#           container_port = 8092
+#         }
+#       }
+#     }
+
+#     metadata {
+#       annotations = {
+#         "autoscaling.knative.dev/maxScale" = "1"
+#       }
+#     }
+#   }
+# }
+
 data "google_iam_policy" "noauth" {
   binding {
     role    = "roles/run.invoker"
@@ -149,6 +194,14 @@ resource "google_cloud_run_service_iam_policy" "noauth_state_service" {
 
   policy_data = data.google_iam_policy.noauth.policy_data
 }
+
+# resource "google_cloud_run_service_iam_policy" "noauth_auth_service" {
+#   location = google_cloud_run_service.auth_service.location
+#   project  = google_cloud_run_service.auth_service.project
+#   service  = google_cloud_run_service.auth_service.name
+
+#   policy_data = data.google_iam_policy.noauth.policy_data
+# }
 
 resource "google_cloud_run_service_iam_policy" "noauth_command_queue_service" {
   location = google_cloud_run_service.command_queue_service.location
