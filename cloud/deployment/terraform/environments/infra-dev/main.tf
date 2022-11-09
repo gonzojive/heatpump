@@ -76,7 +76,7 @@ resource "google_cloud_run_service" "command_queue_service" {
     spec {
       containers {
         # bazel run //cmd/queueserver:push-image
-        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/command-queue-service-image@sha256:50311f03fdc452c56055793e871a2e2ff96cf793fedb148043884e6858899ae2"
+        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/command-queue-service-image@sha256:507394c79022e2cb9e31f22ec1bbf2d0c9506e6d4ba74e8dc9c15d0e64d45302"
         # Enable HTTP/2 so gRPC works.
         # https://cloud.google.com/run/docs/configuring/http2
         ports {
