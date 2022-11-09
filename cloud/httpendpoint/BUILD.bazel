@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "httpendpoint",
+    srcs = [
+        "accountlinking.go",
+        "httpendpoint.go",
+    ],
+    importpath = "github.com/gonzojive/heatpump/cloud/httpendpoint",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cloud/google/cloudconfig",
+        "//cloud/google/server/fulfilment",
+        "//cloud/secrets",
+        "@com_github_go_oauth2_oauth2_v4//errors",
+        "@com_github_go_oauth2_oauth2_v4//manage",
+        "@com_github_go_oauth2_oauth2_v4//models",
+        "@com_github_go_oauth2_oauth2_v4//server",
+        "@com_github_go_oauth2_oauth2_v4//store",
+        "@com_github_golang_glog//:glog",
+        "@com_google_cloud_go_pubsub//:pubsub",
+    ],
+)

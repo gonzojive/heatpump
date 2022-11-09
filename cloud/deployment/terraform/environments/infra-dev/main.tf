@@ -81,26 +81,26 @@ resource "google_artifact_registry_repository" "my-repo" {
   format        = "DOCKER"
 }
 
-# resource "google_cloud_run_service" "google_actions_http_endpoint" {
-#   name     = "google-actions-http-endpoint"
-#   location = local.gcp_location
+resource "google_cloud_run_service" "google_actions_http_endpoint" {
+  name     = "google-actions-http-endpoint"
+  location = local.gcp_location
 
-#   metadata {
-#     annotations = {
-#       "run.googleapis.com/client-name" = "terraform"
-#       "run.googleapis.com/ingress"     = "all"
-#     }
-#   }
+  metadata {
+    annotations = {
+      "run.googleapis.com/client-name" = "terraform"
+      "run.googleapis.com/ingress"     = "all"
+    }
+  }
 
-#   template {
-#     spec {
-#       containers {
-#         # bazel run //cmd/queueserver:push-image
-#         image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/reverse-proxy-image@sha256:981653a39aa265d670c04693f0660a6646068f32933ad26c0885637120a87cfc"
-#       }
-#     }
-#   }
-# }
+  template {
+    spec {
+      containers {
+        # bazel run //cmd/reverse-proxy:push-image
+        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/reverse-proxy-image@sha256:af1a876b41dd8977927efe7fca81d16869b045652c4c63b1e4442faa0854f4ce"
+      }
+    }
+  }
+}
 
 resource "google_cloud_run_service" "command_queue_service" {
   name     = "command-queue-service"
@@ -208,13 +208,13 @@ data "google_iam_policy" "noauth" {
   }
 }
 
-# resource "google_cloud_run_service_iam_policy" "noauth" {
-#   location = google_cloud_run_service.google_actions_http_endpoint.location
-#   project  = google_cloud_run_service.google_actions_http_endpoint.project
-#   service  = google_cloud_run_service.google_actions_http_endpoint.name
+resource "google_cloud_run_service_iam_policy" "noauth_google_actions_http_endpoint" {
+  location = google_cloud_run_service.google_actions_http_endpoint.location
+  project  = google_cloud_run_service.google_actions_http_endpoint.project
+  service  = google_cloud_run_service.google_actions_http_endpoint.name
 
-#   policy_data = data.google_iam_policy.noauth.policy_data
-# }
+  policy_data = data.google_iam_policy.noauth.policy_data
+}
 
 resource "google_cloud_run_service_iam_policy" "noauth_state_service" {
   location = google_cloud_run_service.state_service.location

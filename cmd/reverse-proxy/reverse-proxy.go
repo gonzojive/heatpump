@@ -15,7 +15,7 @@ import (
 const cloudRunPortEnvVar = "PORT"
 
 func main() {
-	rpURL, err := url.Parse("http://192.184.148.224:42598")
+	rpURL, err := url.Parse("http://daly.red:42598")
 	if err != nil {
 		glog.Fatal(err)
 	}
