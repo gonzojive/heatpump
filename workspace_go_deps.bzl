@@ -607,6 +607,16 @@ def go_dependencies():
         sum = "h1:gQz4mCbXsO+nc9n1hCxHcGA3Zx3Eo+UHZoInFGUIXNM=",
         version = "v0.0.0-20190812154241-14fe0d1b01d4",
     )
+    go_repository(
+        # keep
+        name = "com_github_rmrobinson_google_smart_home_action_go",
+        importpath = "github.com/rmrobinson/google-smart-home-action-go",
+        # sum = "h1:Umo2jL3qWW5k00KOsSsqMoJg7Bm0/w7arJpVONzL9bU=",
+        # version = "v0.0.0-20210104014003-093fc5a47d97",
+        commit = "64a026a8478267ec9f645406f7cc44ecfa88ec78",
+        vcs = "git",
+        remote = "git@github.com:gonzojive/google-smart-home-action-go.git",
+    )
 
     go_repository(
         name = "com_github_rogpeppe_go_internal",

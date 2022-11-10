@@ -112,11 +112,12 @@ func (t temperature) Fahrenheit() float64 { return (t.Celcius() * 9 / 5) + 32 }
 
 func (dev *fanCoilUnit) GetState() smarthome.DeviceState {
 	// See https://developers.google.com/assistant/smarthome/guides/thermostat#sample-query-response
-	return smarthome.NewDeviceState(true).
-		RecordCustomState("thermostatMode", dev.mode).
-		RecordCustomState("thermostatTemperatureSetpoint", dev.thermostatTemperatureSetpoint.Celcius()).
-		RecordCustomState("thermostatTemperatureAmbient", dev.thermostatTemperatureAmbient.Celcius())
-	//RecordCustomState("thermostatHumidityAmbient", dev.thermostatHumidityAmbient.Fahrenheit())
+	s := smarthome.NewDeviceState(true)
+	s.State["thermostatMode"] = dev.mode
+	s.State["thermostatTemperatureSetpoint"] = dev.thermostatTemperatureSetpoint.Celcius()
+	s.State["thermostatTemperatureAmbient"] = dev.thermostatTemperatureAmbient.Celcius()
+	// "thermostatHumidityAmbient"
+	return s
 }
 
 type fulfilmentService struct {
@@ -157,19 +158,18 @@ func (srv *fulfilmentService) Sync(context.Context, string) (*smarthome.SyncResp
 	for _, fcu := range srv.fanCoilUnit {
 		// Fan coil units have built-in thermostats.
 		dev := smarthome.NewDevice(fcu.id, "action.devices.types.THERMOSTAT")
-		dev.AddCustomTrait("action.devices.traits.TemperatureSetting", func(setAttribute func(key string, val interface{})) {
-			setAttribute("availableThermostatModes", []string{
-				"off",
-				"heat",
-				"cool",
-				"on",
-			})
-			setAttribute("thermostatTemperatureRange", map[string]int{
-				"minThresholdCelsius": 15,
-				"maxThresholdCelsius": 30,
-			})
-			setAttribute("thermostatTemperatureUnit", "F")
-		})
+		dev.Traits["action.devices.traits.TemperatureSetting"] = true
+		dev.Attributes["availableThermostatModes"] = []string{
+			"off",
+			"heat",
+			"cool",
+			"on",
+		}
+		dev.Attributes["thermostatTemperatureRange"] = map[string]int{
+			"minThresholdCelsius": 15,
+			"maxThresholdCelsius": 30,
+		}
+		dev.Attributes["thermostatTemperatureUnit"] = "F"
 		dev.Name = smarthome.DeviceName{
 			DefaultNames: []string{"Chiltrix Fan Coil Unit"},
 			Name:         fcu.name,
