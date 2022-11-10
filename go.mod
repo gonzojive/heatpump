@@ -24,12 +24,10 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/howeyc/crc16 v0.0.0-20171223171357-2b2a61e366a6
 	github.com/inhies/go-bytesize v0.0.0-20201103132853-d0aed0d254f8
-	github.com/johnsiilver/golib v1.1.2
 	github.com/martinlindhe/unit v0.0.0-20201217003049-aef7d8d7910f
 	github.com/mtraver/iotcore v0.0.0-20210812222124-e6d0c936231c
 	github.com/rmrobinson/google-smart-home-action-go v0.0.0-20210104014003-093fc5a47d97
 	github.com/samber/lo v1.33.0
-	github.com/stretchr/testify v1.8.0
 	github.com/teambition/rrule-go v1.7.3
 	github.com/yuin/goldmark v1.4.13
 	go.uber.org/multierr v1.6.0
@@ -50,7 +48,6 @@ require (
 	cloud.google.com/go/longrunning v0.3.0 // indirect
 	github.com/DataDog/zstd v1.4.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.0.4-0.20210122082011-bb5d392ed82d // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
@@ -62,7 +59,6 @@ require (
 	github.com/googleapis/gax-go/v2 v2.6.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tidwall/btree v0.0.0-20191029221954-400434d76274 // indirect
 	github.com/tidwall/buntdb v1.1.2 // indirect
 	github.com/tidwall/gjson v1.12.1 // indirect
@@ -81,5 +77,4 @@ require (
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20221107162902-2d387536bcdd // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
