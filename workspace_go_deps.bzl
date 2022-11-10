@@ -1624,33 +1624,6 @@ def go_dependencies():
         sum = "h1:7Chpin9p50NTU8Tb7qk+I11U/IwVXmDhEoSsdccvInE=",
         version = "v1.9.0",
     )
-    go_repository(
-        name = "com_google_firebase_go",
-        importpath = "firebase.google.com/go",
-        sum = "h1:3TdYC3DDi6aHn20qoRkxwGqNgdjtblwVAyRLQwGn/+4=",
-        version = "v3.13.0+incompatible",
-        # These build directives are required so that we avoid pulling in
-        # @org_golang_google_genproto types that have "weird" build files that
-        # are incompatible with rules_go's way of building Go packages. They get
-        # pulled in because the override in rules_go for those packages (they
-        # have special handling there) isn't up-to-date with the current version
-        # of these required by google's storage package. Since there's no change
-        # in the _content_ of these types, but just in the version metadata, we
-        # can get away with simply replacing them.
-        #
-        # @go_googleapis//google/api:annotations_go_proto is the newer version
-        # of @org_golang_google_genproto//googleapis/api/annotations:annotations
-        #
-        # This dep was discovered using bazel cquery
-        # 'somepath(//cmd/stateservice,
-        # @org_golang_google_genproto//googleapis/api/annotations:annotations)'
-        build_directives = [
-            "gazelle:resolve go google.golang.org/genproto/googleapis/api/annotations @go_googleapis//google/api:annotations_go_proto",  # keep
-            "gazelle:resolve go google.golang.org/genproto/googleapis/firestore/v1beta @go_googleapis//google/firestore/v1beta:firestore_go_proto",  # keep
-            "gazelle:resolve go google.golang.org/genproto/googleapis/firestore/v1 @go_googleapis//google/firestore/v1:firestore_go_proto",  # keep
-        ],
-        build_file_proto_mode = "disable",
-    )
 
     go_repository(
         name = "com_shuralyov_dmitri_gpu_mtl",

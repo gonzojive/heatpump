@@ -25,7 +25,6 @@ go_test(
         "@com_github_go_oauth2_oauth2_v4//models",
         "@com_github_stretchr_testify//assert",
         "@com_google_cloud_go_firestore//:firestore",
-        "@com_google_firebase_go//:go",
         "@org_golang_google_api//iterator",
     ],
 )

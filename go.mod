@@ -12,7 +12,6 @@ require (
 	cloud.google.com/go/firestore v1.8.0
 	cloud.google.com/go/pubsub v1.3.1
 	cloud.google.com/go/secretmanager v1.9.0
-	firebase.google.com/go v3.13.0+incompatible
 	github.com/adrg/xdg v0.4.0
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/eclipse/paho.mqtt.golang v1.3.5
@@ -47,7 +46,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.1 // indirect
 	cloud.google.com/go/iam v0.7.0 // indirect
 	cloud.google.com/go/longrunning v0.3.0 // indirect
-	cloud.google.com/go/storage v1.27.0 // indirect
 	github.com/DataDog/zstd v1.4.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

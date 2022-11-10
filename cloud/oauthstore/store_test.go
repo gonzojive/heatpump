@@ -2,12 +2,9 @@ package oauthstore
 
 import (
 	"context"
-	"log"
-	"os"
 	"testing"
 
 	"cloud.google.com/go/firestore"
-	firebase "firebase.google.com/go"
 	"github.com/go-oauth2/oauth2/v4"
 	"github.com/go-oauth2/oauth2/v4/models"
 	"github.com/stretchr/testify/assert"
@@ -16,6 +13,7 @@ import (
 
 var c *firestore.Client
 
+/*
 func TestMain(m *testing.M) {
 	project, ok := os.LookupEnv("PROJECT_ID")
 	if !ok {
@@ -36,6 +34,7 @@ func TestMain(m *testing.M) {
 		return m.Run()
 	}())
 }
+*/
 
 func TestStoreClient(t *testing.T) {
 	client := NewTokenStorage(c, "tests")

@@ -13,7 +13,7 @@ go_library(
         "//proto/controller",
         "//proto/fancoil",
         "@com_github_golang_glog//:glog",
-        "@com_github_rmrobinson_google_smart_home_action_go//:go_default_library",
+        "@com_github_rmrobinson_google_smart_home_action_go//:google-smart-home-action-go",
         "@com_google_cloud_go_pubsub//:pubsub",
         "@org_golang_google_protobuf//proto",
         "@org_uber_go_zap//:zap",
