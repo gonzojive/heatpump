@@ -86,7 +86,21 @@ func NewAccountLinkingServer(ctx context.Context, cloudParams *cloudconfig.Param
 		glog.Infof("Response Error: %s", re.Error.Error())
 	})
 
-	service.oauthServer.SetUserAuthorizationHandler(func(w http.ResponseWriter, r *http.Request) (userID string, err error) {
+	service.oauthServer.SetUserAuthorizationHandler(func(rw http.ResponseWriter, req *http.Request) (userID string, err error) {
+		// Normally, this would be the place where you would check if the user is logged in and gives his consent.
+		// We're simplifying things and just checking if the request includes a valid username and password
+		if req.Form.Get("secret") != "warmth" {
+			rw.Header().Set("Content-Type", "text/html;charset=UTF-8")
+			rw.Write([]byte(`<h1>Login</h1>`))
+			rw.Write([]byte(`
+			<p>What's the secret password?</p>
+			<form method="post">
+				<input type="password" name="secret" />
+				<input type="submit">
+			</form>
+		`))
+			return
+		}
 		// Return user id.
 		return "4242", nil
 	})
