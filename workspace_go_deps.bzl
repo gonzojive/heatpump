@@ -607,8 +607,9 @@ def go_dependencies():
         sum = "h1:gQz4mCbXsO+nc9n1hCxHcGA3Zx3Eo+UHZoInFGUIXNM=",
         version = "v0.0.0-20190812154241-14fe0d1b01d4",
     )
+
+    # keep
     go_repository(
-        # keep
         name = "com_github_rmrobinson_google_smart_home_action_go",
         importpath = "github.com/rmrobinson/google-smart-home-action-go",
         # sum = "h1:Umo2jL3qWW5k00KOsSsqMoJg7Bm0/w7arJpVONzL9bU=",
@@ -711,8 +712,8 @@ def go_dependencies():
     go_repository(
         name = "com_github_stretchr_objx",
         importpath = "github.com/stretchr/objx",
-        sum = "h1:4G4v2dO3VZwixGIRoQ5Lfboy6nUhCyYzaqnIAPPhYs4=",
-        version = "v0.1.0",
+        sum = "h1:M2gUjqZET1qApGOWNSnZ49BAIMX4F/1plDv3+l31EJ4=",
+        version = "v0.4.0",
     )
     go_repository(
         name = "com_github_stretchr_testify",
@@ -1622,6 +1623,33 @@ def go_dependencies():
         importpath = "cloud.google.com/go/workflows",
         sum = "h1:7Chpin9p50NTU8Tb7qk+I11U/IwVXmDhEoSsdccvInE=",
         version = "v1.9.0",
+    )
+    go_repository(
+        name = "com_google_firebase_go",
+        importpath = "firebase.google.com/go",
+        sum = "h1:3TdYC3DDi6aHn20qoRkxwGqNgdjtblwVAyRLQwGn/+4=",
+        version = "v3.13.0+incompatible",
+        # These build directives are required so that we avoid pulling in
+        # @org_golang_google_genproto types that have "weird" build files that
+        # are incompatible with rules_go's way of building Go packages. They get
+        # pulled in because the override in rules_go for those packages (they
+        # have special handling there) isn't up-to-date with the current version
+        # of these required by google's storage package. Since there's no change
+        # in the _content_ of these types, but just in the version metadata, we
+        # can get away with simply replacing them.
+        #
+        # @go_googleapis//google/api:annotations_go_proto is the newer version
+        # of @org_golang_google_genproto//googleapis/api/annotations:annotations
+        #
+        # This dep was discovered using bazel cquery
+        # 'somepath(//cmd/stateservice,
+        # @org_golang_google_genproto//googleapis/api/annotations:annotations)'
+        build_directives = [
+            "gazelle:resolve go google.golang.org/genproto/googleapis/api/annotations @go_googleapis//google/api:annotations_go_proto",  # keep
+            "gazelle:resolve go google.golang.org/genproto/googleapis/firestore/v1beta @go_googleapis//google/firestore/v1beta:firestore_go_proto",  # keep
+            "gazelle:resolve go google.golang.org/genproto/googleapis/firestore/v1 @go_googleapis//google/firestore/v1:firestore_go_proto",  # keep
+        ],
+        build_file_proto_mode = "disable",
     )
 
     go_repository(

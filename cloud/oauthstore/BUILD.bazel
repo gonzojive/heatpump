@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "oauthstore",
+    srcs = [
+        "client.go",
+        "store.go",
+    ],
+    importpath = "github.com/gonzojive/heatpump/cloud/oauthstore",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_go_oauth2_oauth2_v4//:oauth2",
+        "@com_github_go_oauth2_oauth2_v4//models",
+        "@com_google_cloud_go_firestore//:firestore",
+        "@org_golang_google_api//iterator",
+    ],
+)
+
+go_test(
+    name = "oauthstore_test",
+    srcs = ["store_test.go"],
+    embed = [":oauthstore"],
+    deps = [
+        "@com_github_go_oauth2_oauth2_v4//:oauth2",
+        "@com_github_go_oauth2_oauth2_v4//models",
+        "@com_github_stretchr_testify//assert",
+        "@com_google_cloud_go_firestore//:firestore",
+        "@com_google_firebase_go//:go",
+        "@org_golang_google_api//iterator",
+    ],
+)
