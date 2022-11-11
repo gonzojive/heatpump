@@ -43,7 +43,7 @@ resource "google_project_service" "secretmanager" {
   disable_dependent_services = true
 }
 
-resource "google_project_service" "secretmanager" {
+resource "google_project_service" "firestore" {
   project = var.project
   service = "firestore.googleapis.com"
 
