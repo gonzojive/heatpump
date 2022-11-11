@@ -1,9 +1,30 @@
+/*
+Copyright (c) 2019 Tadej Slamic
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 package oauthstore
 
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -12,42 +33,51 @@ import (
 )
 
 type store struct {
-	s sync.Mutex
-	c *firestore.Client
-	n string // Top-level collection name.
-	t time.Duration
+	c          *firestore.Client
+	collection *firestore.CollectionRef
+	timeout    time.Duration
 }
 
 func (s *store) Put(ctx context.Context, token *models.Token) error {
-	s.s.Lock()
-	defer s.s.Unlock()
-	ctx, cancel := context.WithTimeout(ctx, s.t)
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
-	_, _, err := s.c.Collection(s.n).Add(ctx, token)
+	_, _, err := s.collection.Add(ctx, token)
 	return err
 }
 
-func (s *store) Get(ctx context.Context, key string, val interface{}) (*models.Token, error) {
-	s.s.Lock()
-	defer s.s.Unlock()
-	ctx, cancel := context.WithTimeout(ctx, s.t)
-	defer cancel()
-	iter := s.c.Collection(s.n).Where(key, "==", val).Limit(1).Documents(ctx)
-	doc, err := first(iter)
-	if err != nil {
-		return nil, err
+func runInTransaction[T any](ctx context.Context, client *firestore.Client, fn func(ctx context.Context, txn *firestore.Transaction) (T, error), opts ...firestore.TransactionOption) (T, error) {
+	var result T
+	if err := client.RunTransaction(ctx, func(ctx context.Context, txn *firestore.Transaction) error {
+		var err error
+		result, err = fn(ctx, txn)
+		return err
+	}, opts...); err != nil {
+		var zero T
+		return zero, nil
 	}
-	info := &models.Token{}
-	err = doc.DataTo(info)
-	return info, err
+	return result, nil
 }
 
-func (s *store) GetClient(ctx context.Context, key string, val interface{}) (*models.Client, error) {
-	s.s.Lock()
-	defer s.s.Unlock()
-	ctx, cancel := context.WithTimeout(ctx, s.t)
+func (s *store) Get(ctx context.Context, keyPath string, keyValue string) (*models.Token, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
-	iter := s.c.Collection(s.n).Where(key, "==", val).Limit(1).Documents(ctx)
+
+	return runInTransaction(ctx, s.c, func(ctx context.Context, txn *firestore.Transaction) (*models.Token, error) {
+		iter := txn.Documents(s.collection.Where(keyPath, "==", keyValue).Limit(1))
+		doc, err := first(iter)
+		if err != nil {
+			return nil, err
+		}
+		info := &models.Token{}
+		err = doc.DataTo(info)
+		return info, err
+	})
+}
+
+func (s *store) GetClient(ctx context.Context, key string, keyValue string) (*models.Client, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
+	defer cancel()
+	iter := s.collection.Where(key, "==", keyValue).Limit(1).Documents(ctx)
 	doc, err := first(iter)
 	if err != nil {
 		return nil, err
@@ -57,13 +87,11 @@ func (s *store) GetClient(ctx context.Context, key string, val interface{}) (*mo
 	return info, err
 }
 
-func (s *store) Del(ctx context.Context, key string, val interface{}) error {
-	s.s.Lock()
-	defer s.s.Unlock()
-	ctx, cancel := context.WithTimeout(ctx, s.t)
+func (s *store) Del(ctx context.Context, key string, keyValue string) error {
+	ctx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
 	return s.c.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		query := s.c.Collection(s.n).Where(key, "==", val).Limit(1)
+		query := s.collection.Where(key, "==", keyValue).Limit(1)
 		iter := tx.Documents(query)
 		doc, err := first(iter)
 		if err != nil {

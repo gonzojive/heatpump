@@ -1,3 +1,25 @@
+/*
+Copyright (c) 2019 Tadej Slamic
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 package oauthstore
 
 import (
@@ -8,7 +30,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/go-oauth2/oauth2/v4"
@@ -97,7 +118,6 @@ func emulatorClient(ctx context.Context, t *testing.T) (*firestore.Client, func(
 		return nil
 	})
 	cleanup := func() {
-		time.Sleep(time.Millisecond * 10)
 		glog.Infof("cleaning up emulator...")
 		// Equivalent of Ctrl-c the emulator and wait for it to exit.
 		if cmd.Process != nil {
@@ -196,8 +216,8 @@ func TestNoDocument(t *testing.T) {
 	c, cancel := emulatorClient(ctx, t)
 	defer cancel()
 
-	client := NewTokenStorage(c, "tests")
-	info, err := client.GetByRefresh(ctx, "whoops")
+	store := NewTokenStorage(c, "tests")
+	info, err := store.GetByRefresh(ctx, "whoops")
 	assert.Nil(t, info)
 	if err != iterator.Done {
 		t.Fatalf("expected iterator.Done, got err = %v", err)

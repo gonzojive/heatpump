@@ -1,3 +1,25 @@
+/*
+Copyright (c) 2019 Tadej Slamic
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 package oauthstore
 
 import (
@@ -20,25 +42,35 @@ const (
 	timeout = 30 * time.Second
 )
 
-// NewTokenStorage returns a new Firestore token store.
+// NewTokenStorage returns a new Firestore-backed token store.
 // The provided firestore client will never be closed.
-func NewTokenStorage(c *firestore.Client, collection string) oauth2.TokenStore {
-	fs := &store{c: c, n: collection, t: timeout}
-	return &client{c: fs}
+func NewTokenStorage(c *firestore.Client, collection string) *TokenStore {
+	return &TokenStore{&store{c: c, collection: c.Collection(collection), timeout: timeout}}
 }
 
 // NewClientStorage returns a new Firestore token store.
 // The provided firestore client will never be closed.
-func NewClientStorage(c *firestore.Client, collection string) oauth2.ClientStore {
-	fs := &store{c: c, n: collection, t: timeout}
-	return &client{c: fs}
+func NewClientStorage(c *firestore.Client, collection string) *ClientStore {
+	return &ClientStore{&store{c: c, collection: c.Collection(collection), timeout: timeout}}
 }
 
-type client struct {
+type ClientStore struct {
+	st *store
+}
+
+var _ oauth2.ClientStore = (*ClientStore)(nil)
+
+func (s *ClientStore) GetByID(ctx context.Context, id string) (oauth2.ClientInfo, error) {
+	return s.st.GetClient(ctx, KeyClientID, id)
+}
+
+type TokenStore struct {
 	c *store
 }
 
-func (f *client) Create(ctx context.Context, info oauth2.TokenInfo) error {
+var _ oauth2.TokenStore = (*TokenStore)(nil)
+
+func (f *TokenStore) Create(ctx context.Context, info oauth2.TokenInfo) error {
 	t, err := token(info)
 	if err != nil {
 		return err
@@ -46,32 +78,28 @@ func (f *client) Create(ctx context.Context, info oauth2.TokenInfo) error {
 	return f.c.Put(ctx, t)
 }
 
-func (f *client) RemoveByCode(ctx context.Context, code string) error {
+func (f *TokenStore) RemoveByCode(ctx context.Context, code string) error {
 	return f.c.Del(ctx, keyCode, code)
 }
 
-func (f *client) RemoveByAccess(ctx context.Context, access string) error {
+func (f *TokenStore) RemoveByAccess(ctx context.Context, access string) error {
 	return f.c.Del(ctx, keyAccess, access)
 }
 
-func (f *client) RemoveByRefresh(ctx context.Context, refresh string) error {
+func (f *TokenStore) RemoveByRefresh(ctx context.Context, refresh string) error {
 	return f.c.Del(ctx, keyRefresh, refresh)
 }
 
-func (f *client) GetByCode(ctx context.Context, code string) (oauth2.TokenInfo, error) {
+func (f *TokenStore) GetByCode(ctx context.Context, code string) (oauth2.TokenInfo, error) {
 	return f.c.Get(ctx, keyCode, code)
 }
 
-func (f *client) GetByAccess(ctx context.Context, access string) (oauth2.TokenInfo, error) {
+func (f *TokenStore) GetByAccess(ctx context.Context, access string) (oauth2.TokenInfo, error) {
 	return f.c.Get(ctx, keyAccess, access)
 }
 
-func (f *client) GetByRefresh(ctx context.Context, refresh string) (oauth2.TokenInfo, error) {
+func (f *TokenStore) GetByRefresh(ctx context.Context, refresh string) (oauth2.TokenInfo, error) {
 	return f.c.Get(ctx, keyRefresh, refresh)
-}
-
-func (f *client) GetByID(ctx context.Context, id string) (oauth2.ClientInfo, error) {
-	return f.c.GetClient(ctx, KeyClientID, id)
 }
 
 // ErrInvalidTokenInfo is returned whenever TokenInfo is either nil or zero/empty.
