@@ -55,6 +55,14 @@ resource "google_project_service" "firestore" {
   disable_dependent_services = true
 }
 
+# Firestore database creation
+# https://cloud.google.com/firestore/docs/solutions/automate-database-create#firestoretf
+resource "google_app_engine_application" "app" {
+  project       = google_project.my_project.project_id
+  location_id   = local.gcp_location
+  database_type = "CLOUD_FIRESTORE"
+}
+
 # Artifact storage of container images.
 
 resource "google_artifact_registry_repository" "my-repo" {
