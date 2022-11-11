@@ -53,7 +53,7 @@ func runInTransaction[T any](ctx context.Context, client *firestore.Client, fn f
 		return err
 	}, opts...); err != nil {
 		var zero T
-		return zero, nil
+		return zero, err
 	}
 	return result, nil
 }

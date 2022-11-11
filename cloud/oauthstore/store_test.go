@@ -39,7 +39,6 @@ import (
 	portpicker "github.com/johnsiilver/golib/development/portpicker"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/api/iterator"
 )
 
 const firebaseEmulatorBazelPath = "cloud/oauthstore/firestore-emulator"
@@ -219,8 +218,8 @@ func TestNoDocument(t *testing.T) {
 	store := NewTokenStorage(c, "tests")
 	info, err := store.GetByRefresh(ctx, "whoops")
 	assert.Nil(t, info)
-	if err != iterator.Done {
-		t.Fatalf("expected iterator.Done, got err = %v", err)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
 	}
 }
 

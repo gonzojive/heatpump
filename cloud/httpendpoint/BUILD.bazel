@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//cloud/google/cloudconfig",
         "//cloud/google/server/fulfilment",
+        "//cloud/oauthstore",
         "//cloud/secrets",
         "@com_github_go_oauth2_oauth2_v4//errors",
         "@com_github_go_oauth2_oauth2_v4//manage",
@@ -18,6 +19,7 @@ go_library(
         "@com_github_go_oauth2_oauth2_v4//server",
         "@com_github_go_oauth2_oauth2_v4//store",
         "@com_github_golang_glog//:glog",
+        "@com_google_cloud_go_firestore//:firestore",
         "@com_google_cloud_go_pubsub//:pubsub",
     ],
 )

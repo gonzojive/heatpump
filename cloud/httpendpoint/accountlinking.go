@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 
+	"cloud.google.com/go/firestore"
 	"github.com/go-oauth2/oauth2/v4/errors"
 	"github.com/go-oauth2/oauth2/v4/manage"
 	"github.com/go-oauth2/oauth2/v4/models"
@@ -19,6 +20,7 @@ import (
 	"github.com/go-oauth2/oauth2/v4/store"
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/cloud/google/cloudconfig"
+	"github.com/gonzojive/heatpump/cloud/oauthstore"
 	"github.com/gonzojive/heatpump/cloud/secrets"
 )
 
@@ -60,10 +62,12 @@ func NewAccountLinkingServer(ctx context.Context, cloudParams *cloudconfig.Param
 	}
 
 	// token memory store
-	tokenStore, err := store.NewMemoryTokenStore()
+	fsClient, err := createFirestoreClient(ctx, cloudParams.GCPProject)
 	if err != nil {
-		return nil, fmt.Errorf("error creating token store")
+		return nil, err
 	}
+
+	tokenStore := oauthstore.NewTokenStorage(fsClient, cloudParams.TokenStoreFirebaseCollectionName)
 	// client memory store
 	clientStore := store.NewClientStore()
 	clientStore.Set(googleOAuthClient.ID, googleOAuthClient)
@@ -135,4 +139,15 @@ func (s *AccountLinkingServer) handleAuthorizeRequest(w http.ResponseWriter, r *
 
 func (s *AccountLinkingServer) handleTokenRequest(w http.ResponseWriter, r *http.Request) {
 	s.oauthServer.HandleTokenRequest(w, r)
+}
+
+func createFirestoreClient(ctx context.Context, projectID string) (*firestore.Client, error) {
+	// Sets your Google Cloud Platform project ID.
+	client, err := firestore.NewClient(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create FireStore client: %v", err)
+	}
+	// Close client when done with
+	// defer client.Close()
+	return client, nil
 }
