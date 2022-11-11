@@ -13,6 +13,7 @@ require (
 	cloud.google.com/go/pubsub v1.3.1
 	cloud.google.com/go/secretmanager v1.9.0
 	github.com/adrg/xdg v0.4.0
+	github.com/bazelbuild/rules_go v0.35.0
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/eclipse/paho.mqtt.golang v1.3.5
 	github.com/go-oauth2/oauth2/v4 v4.5.1
@@ -23,6 +24,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/howeyc/crc16 v0.0.0-20171223171357-2b2a61e366a6
 	github.com/inhies/go-bytesize v0.0.0-20201103132853-d0aed0d254f8
+	github.com/johnsiilver/golib v1.1.2
 	github.com/martinlindhe/unit v0.0.0-20201217003049-aef7d8d7910f
 	github.com/mtraver/iotcore v0.0.0-20210812222124-e6d0c936231c
 	github.com/rmrobinson/google-smart-home-action-go v0.0.0-20210104014003-093fc5a47d97
