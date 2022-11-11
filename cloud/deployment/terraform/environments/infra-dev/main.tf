@@ -43,6 +43,18 @@ resource "google_project_service" "secretmanager" {
   disable_dependent_services = true
 }
 
+resource "google_project_service" "secretmanager" {
+  project = var.project
+  service = "firestore.googleapis.com"
+
+  timeouts {
+    create = "30m"
+    update = "40m"
+  }
+
+  disable_dependent_services = true
+}
+
 # Artifact storage of container images.
 
 resource "google_artifact_registry_repository" "my-repo" {
