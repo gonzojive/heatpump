@@ -28,3 +28,11 @@ go_test(
         "@org_golang_google_api//iterator",
     ],
 )
+
+java_binary(
+    name = "firestore-emulator",
+    main_class = "com.google.cloud.datastore.emulator.firestore.CloudFirestore",
+    runtime_deps = [
+        "@firestore_emulator//jar",
+    ],
+)

@@ -1,6 +1,6 @@
 workspace(name = "github-gonzojive-heatpump")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_jar")
 
 ############ protos
 http_archive(
@@ -109,3 +109,12 @@ _go_image_repos()
 #         "https://zlib.net/zlib-1.2.11.tar.gz",
 #     ],
 # )
+
+########## Firebase emulator, test for testing.
+http_jar(
+    name = "firestore_emulator",
+    sha256 = "489617f9c99d2733c884b7d6e58fe2808f5cb87c645edb967417690b8393c13e",
+    urls = [
+        "https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.15.1.jar",
+    ],
+)
