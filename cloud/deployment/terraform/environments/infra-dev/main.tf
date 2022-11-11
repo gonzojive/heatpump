@@ -55,13 +55,22 @@ resource "google_project_service" "firestore" {
   disable_dependent_services = true
 }
 
+
+# App Engine Admin API.
+resource "google_project_service" "appengine" {
+  project = var.project
+  service = "appengine.googleapis.com"
+
+  disable_dependent_services = true
+}
+
 # Firestore database creation
 # https://cloud.google.com/firestore/docs/solutions/automate-database-create#firestoretf
-resource "google_app_engine_application" "app" {
-  project       = var.project
-  location_id   = local.gcp_location
-  database_type = "CLOUD_FIRESTORE"
-}
+# resource "google_app_engine_application" "app" {
+#   project       = var.project
+#   location_id   = local.gcp_location
+#   database_type = "CLOUD_FIRESTORE"
+# }
 
 # Artifact storage of container images.
 
