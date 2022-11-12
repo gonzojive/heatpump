@@ -1,1 +1,2 @@
 cloud/google/terraform/.terraform
+cloud/deployment/terraform/environments/infra-dev/.terraform
