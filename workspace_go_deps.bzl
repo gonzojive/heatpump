@@ -175,6 +175,7 @@ def go_dependencies():
         importpath = "github.com/dgraph-io/badger/v3",
         sum = "h1:Hmyof0WMEF/QtutX5SQHzIMnJQxb/IrSzhjckV2SD6g=",
         version = "v3.2011.1",
+        build_file_proto_mode = "disable",
     )
     go_repository(
         name = "com_github_dgraph_io_ristretto",
@@ -315,8 +316,8 @@ def go_dependencies():
     go_repository(
         name = "com_github_golang_mock",
         importpath = "github.com/golang/mock",
-        sum = "h1:l75CXGRSwbaYNpl/Z2X1XIIAMSCquvXgpVZDhwEIJsc=",
-        version = "v1.4.4",
+        sum = "h1:ErTB+efbowRARo13NNdxyJji2egdxLGQhRaY+DUumQc=",
+        version = "v1.6.0",
     )
     go_repository(
         name = "com_github_golang_protobuf",
@@ -697,12 +698,6 @@ def go_dependencies():
         commit = "64a026a8478267ec9f645406f7cc44ecfa88ec78",
         vcs = "git",
         remote = "git@github.com:gonzojive/google-smart-home-action-go.git",
-    )
-    go_repository(
-        name = "com_github_rogpeppe_fastuuid",
-        importpath = "github.com/rogpeppe/fastuuid",
-        sum = "h1:Ppwyp6VYCF1nvBTXL3trRso7mXMlRrw9ooo375wvi2s=",
-        version = "v1.2.0",
     )
 
     go_repository(
@@ -1296,8 +1291,8 @@ def go_dependencies():
         #build_file_proto_mode = "disable",
         build_file_proto_mode = "disable",
         importpath = "cloud.google.com/go/firestore",
-        sum = "h1:HokMB9Io0hAyYzlGFeFVMgE3iaPXNvaIsDx5JzblGLI=",
-        version = "v1.8.0",
+        sum = "h1:dMIWvm+3O0E3DM7kcZPH0FBQ94Xg/OMkdTNDaY9itbI=",
+        version = "v1.6.0",
     )
 
     go_repository(
