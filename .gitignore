@@ -2,6 +2,6 @@ bazel-bin
 bazel-out
 bazel-testlogs
 bazel-heatpump
-secrets
+local-secrets
 .terraform
 .terraform.lock.hcl
