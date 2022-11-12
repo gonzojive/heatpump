@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/cloud/google/cloudconfig"
 	"github.com/gonzojive/heatpump/util/must"
 	"github.com/samber/lo"
@@ -133,7 +132,6 @@ func (s *Service) identityFromGRPCMetadata(ctx context.Context) (*Identity, erro
 		return nil, fmt.Errorf("expected 1 gRPC metadata entry for %q, got %d", DeviceAccessTokenMetadataKey, len(metadataEntries))
 	}
 
-	glog.Infof("s = %+v, entries = %v", s, metadataEntries)
 	time.Sleep(time.Second)
 	dat, err := s.tokenVerifier.Verify(TokenString(metadataEntries[0]))
 	if err != nil {

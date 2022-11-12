@@ -18,8 +18,9 @@ type Store interface {
 }
 
 const (
-	devicesCollectionName = "iot-devices"
-	reportedStateProtoCol = "reported-device-state-proto"
+	devicesCollectionName     = "iot-devices"
+	reportedStateProtoCol     = "reported-device-state-proto"
+	reportedStateDebugJSONCol = "debug-state"
 )
 
 func userDeviceDoc(client *firestore.Client, user *acls.Identity, deviceID string) *firestore.DocumentRef {
@@ -48,7 +49,8 @@ func (st *firestoreStore) StoreDeviceState(ctx context.Context, user *acls.Ident
 	if _, err := st.client.Collection(devicesCollectionName).
 		Doc(fmt.Sprintf("user-%s-device-%s", user.ID(), s.GetName())).
 		Set(ctx, map[string]interface{}{
-			reportedStateProtoCol: encoded,
+			reportedStateProtoCol:     encoded,
+			reportedStateDebugJSONCol: s,
 		}, firestore.MergeAll); err != nil {
 		return fmt.Errorf("error adding state to firestore: %w", err)
 	}
@@ -93,3 +95,7 @@ func dataAtPathToProto(d *firestore.DocumentSnapshot, path string, msg proto.Mes
 	}
 	return proto.Unmarshal(wireBytes, msg)
 }
+
+// func protoAsMap(msg proto.Message) (map[string]interface{}, error) {
+// 	jsonBytes, err :=
+// }

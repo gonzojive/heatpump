@@ -12,6 +12,7 @@ import (
 	"github.com/gonzojive/heatpump/cloud/queue/queueclient"
 	"github.com/gonzojive/heatpump/util/grpcserverutil"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 
 	qpb "github.com/gonzojive/heatpump/proto/command_queue"
@@ -24,7 +25,7 @@ var (
 	fancoilServiceAddress = flag.String("fancoil-service-addr", "192.168.86.24:8083", "Remote address of fancoil service.")
 	queueAddr             = flag.String("command-queue-addr", "localhost:8083", "Remote address of CommandQueueService.")
 	stateServiceAddr      = grpcserverutil.AddressFlag(
-		"state-service-addr", "localhost:8083", "Remote address of StateService.",
+		"state-service-addr", "localhost:8089", "Remote address of StateService.",
 		func(ctx context.Context, conn *grpc.ClientConn) (cpb.StateServiceClient, error) {
 			return cpb.NewStateServiceClient(conn), nil
 		})
@@ -40,11 +41,11 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	creds, err := deviceauth.LoadTLSCredentials(authClientFlags)
-	if err != nil {
-		return err
-	}
-	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
+	// creds, err := deviceauth.LoadTLSCredentials(authClientFlags)
+	// if err != nil {
+	// 	return err
+	// }
+	// dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
 
 	cmdClient, err := dialCommandQueue(ctx, authClientFlags)
 	if err != nil {
@@ -56,7 +57,7 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	stateClient, err := stateServiceAddr.Dial(ctx, dialOpts...)
+	stateClient, err := stateServiceAddr.Dial(ctx, grpc.WithInsecure())
 	if err != nil {
 		return err
 	}
@@ -105,8 +106,7 @@ type listener struct {
 }
 
 func (l *listener) handleSetStateRequest(ctx context.Context, req *fcpb.SetStateRequest) error {
-	parsed := &cpb.Command{}
-	glog.Infof("setting target temperature to %vC", parsed.GetSetStateRequest().GetHeatingTargetTemperature().GetDegreesCelcius())
+	glog.Infof("setting target temperature to %vC", req.GetHeatingTargetTemperature())
 	if _, err := l.fancoilClient.SetState(ctx, req); err != nil {
 		return fmt.Errorf("command failed to execute: %w", err)
 	}
@@ -116,6 +116,7 @@ func (l *listener) handleSetStateRequest(ctx context.Context, req *fcpb.SetState
 	if err != nil {
 		return fmt.Errorf("failed to get fan coil state: %w", err)
 	}
+	glog.Infof("setting state for device %q: %s", req.GetFancoilName(), prototext.Format(stateResp.GetState()))
 	if _, err := l.stateClient.SetDeviceState(ctx, &cpb.SetDeviceStateRequest{
 		State: &cpb.DeviceState{
 			Name:         req.GetFancoilName(),
