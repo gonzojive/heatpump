@@ -25,23 +25,6 @@ func NewService(psc *pubsub.Client) *Service {
 	return &Service{
 		sh: smarthome.NewService(zap.L(), &validator{}, &fulfilmentService{
 			commandPublisher: newCommandPublisher(psc),
-			lights: map[string]lightbulb{
-				"abc": {
-					id:         "abc",
-					name:       "ABC Light",
-					isOn:       true,
-					brightness: 8,
-					color: struct {
-						hue        float64
-						saturation float64
-						value      float64
-					}{
-						hue:        .3,
-						saturation: .6,
-						value:      .3,
-					},
-				},
-			},
 			fanCoilUnit: map[string]fanCoilUnit{
 				"xyz": {
 					id:                            "xyz",
@@ -71,26 +54,6 @@ func (v *validator) Validate(ctx context.Context, token string) (string, error) 
 }
 
 var _ smarthome.AccessTokenValidator = (*validator)(nil)
-
-type lightbulb struct {
-	id         string
-	name       string
-	isOn       bool
-	brightness int
-
-	color struct {
-		hue        float64
-		saturation float64
-		value      float64
-	}
-}
-
-func (l *lightbulb) GetState() smarthome.DeviceState {
-	return smarthome.NewDeviceState(true).
-		RecordOnOff(l.isOn).
-		RecordBrightness(l.brightness).
-		RecordColorHSV(l.color.hue, l.color.saturation, l.color.value)
-}
 
 type fanCoilUnit struct {
 	id                            string
@@ -123,7 +86,6 @@ func (dev *fanCoilUnit) GetState() smarthome.DeviceState {
 type fulfilmentService struct {
 	commandPublisher *commandPublisher
 
-	lights      map[string]lightbulb
 	fanCoilUnit map[string]fanCoilUnit
 }
 
@@ -131,30 +93,6 @@ func (srv *fulfilmentService) Sync(context.Context, string) (*smarthome.SyncResp
 	glog.Infof("sync")
 
 	resp := &smarthome.SyncResponse{}
-	for _, light := range srv.lights {
-		ad := smarthome.NewLight(light.id)
-		ad.Name = smarthome.DeviceName{
-			DefaultNames: []string{
-				"Test lamp",
-			},
-			Name: light.name,
-		}
-		ad.WillReportState = false
-		ad.RoomHint = "test room"
-		ad.DeviceInfo = smarthome.DeviceInfo{
-			Manufacturer: "faltung systems",
-			Model:        "tl001",
-			HwVersion:    "0.2",
-			SwVersion:    "0.3",
-		}
-		ad.
-			AddOnOffTrait(false, false).
-			AddBrightnessTrait(false).
-			AddColourTrait(smarthome.HSV, false)
-
-		resp.Devices = append(resp.Devices, ad)
-	}
-
 	for _, fcu := range srv.fanCoilUnit {
 		// Fan coil units have built-in thermostats.
 		dev := smarthome.NewDevice(fcu.id, "action.devices.types.THERMOSTAT")
@@ -202,9 +140,6 @@ func (es *fulfilmentService) Query(_ context.Context, req *smarthome.QueryReques
 	}
 
 	for _, deviceArg := range req.Devices {
-		if light, found := es.lights[deviceArg.ID]; found {
-			resp.States[deviceArg.ID] = light.GetState()
-		}
 		if dev, found := es.fanCoilUnit[deviceArg.ID]; found {
 			resp.States[deviceArg.ID] = dev.GetState()
 		}
