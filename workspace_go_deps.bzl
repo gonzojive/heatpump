@@ -697,7 +697,7 @@ def go_dependencies():
         # version = "v0.0.0-20210104014003-093fc5a47d97",
         commit = "64a026a8478267ec9f645406f7cc44ecfa88ec78",
         vcs = "git",
-        remote = "https://github.com:gonzojive/google-smart-home-action-go",
+        remote = "https://github.com/gonzojive/google-smart-home-action-go.git",
     )
 
     go_repository(
