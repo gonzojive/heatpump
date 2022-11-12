@@ -24,23 +24,6 @@ import (
 // UserIDAttribute is the name of the pub/sub message attribute with the user id.
 const UserIDAttribute = "user-id"
 
-var fixmeDumbMessages = map[string][]*pb.MessageResponse{
-	"thermostat-commands": {
-		{
-			Id:      "one",
-			Payload: []byte("hello world"),
-		},
-		{
-			Id:      "two",
-			Payload: []byte("hello world 2"),
-		},
-		{
-			Id:      "three",
-			Payload: []byte("hello world 3"),
-		},
-	},
-}
-
 type Service struct {
 	pb.UnimplementedCommandQueueServiceServer
 	googleCloudProjectID string
@@ -62,6 +45,7 @@ var _ pb.CommandQueueServiceServer = (*Service)(nil)
 // New creats a new Google pub/sub backed service.
 func New(aclsService *acls.Service, googleCloudProjectID, subscriptionName string) *Service {
 	return &Service{
+		aclsService:          aclsService,
 		googleCloudProjectID: googleCloudProjectID,
 		subscriptionName:     subscriptionName,
 		listenersByID:        lockutil.NewLockedValue(map[string]*activeListener{}),
