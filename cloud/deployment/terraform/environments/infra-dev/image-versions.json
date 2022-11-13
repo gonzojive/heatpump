@@ -1,0 +1,21 @@
+{
+  "registry-url": "https://us-west4-docker.pkg.dev/",
+  "images": {
+    "auth-service": {
+      "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/authservice-image:main",
+      "resolved": "us-west4-docker.pkg.dev@sha256:d6776d9eabbb2536fe91c7fad122d3bd56829179f1e29b4ccaf45b6ff76e60e2"
+    },
+    "google-actions-http-endpoint": {
+      "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint:main",
+      "resolved": "us-west4-docker.pkg.dev@sha256:fb12b82d984287811dae3a70adc67577abbdf6fbabf8521aafff233e7c63da5d"
+    },
+    "queue-service": {
+      "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/command-queue-service-image:main",
+      "resolved": "us-west4-docker.pkg.dev@sha256:99485bcb7b6f36ec9e590baf6f96ea989e9457543c3efa032d16973e8211f5d7"
+    },
+    "state-service": {
+      "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image:main",
+      "resolved": "us-west4-docker.pkg.dev@sha256:93af8dbf8e1ad909c11a3a913369646ce0f3341c5cb6763e4f127798e7af9d20"
+    }
+  }
+}

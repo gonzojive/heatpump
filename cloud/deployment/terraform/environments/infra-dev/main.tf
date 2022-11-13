@@ -1,5 +1,14 @@
 locals {
   gcp_location = "us-west4"
+
+  # We keep a map of (shorthand image name => pinned image reference) in a file
+  # in this directory.
+  #
+  # To regenerate the file based on image-versions-config.json, run
+  /*
+   bazel run --run_under="cd $PWD &&" //cmd/cloud/update-image-versions -- --alsologtostderr --input "cloud/deployment/terraform/environments/infra-dev/image-versions.json" --output "cloud/deployment/terraform/environments/infra-dev/image-versions.json"
+  */
+  image_versions = jsondecode(file("${path.module}/image-versions.json"))["images"]
 }
 
 provider "google" {
@@ -64,7 +73,7 @@ resource "google_project_service" "iam" {
 
 # Create service accounts (robots) and establish their permissions.
 resource "google_service_account" "google_actions_http_job" {
-  project = var.project
+  project      = var.project
   account_id   = "google-actions-http-job"
   display_name = "Cloud Run user for Google Actions HTTP responder"
 }
@@ -139,7 +148,7 @@ resource "google_cloud_run_service" "command_queue_service" {
     spec {
       containers {
         # bazel run //cmd/queueserver:push-image
-        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/command-queue-service-image@sha256:507394c79022e2cb9e31f22ec1bbf2d0c9506e6d4ba74e8dc9c15d0e64d45302"
+        image = local.image_versions["queue-service"].resolved
         # Enable HTTP/2 so gRPC works.
         # https://cloud.google.com/run/docs/configuring/http2
         ports {
@@ -172,7 +181,7 @@ resource "google_cloud_run_service" "state_service" {
     spec {
       containers {
         # bazel run //cmd/stateservice:push-image
-        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image@sha256:554de0a557c20a2bfa5f97c2689482e9a78fde11ffd958602c57e5d89b33e736"
+        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image:main"
         # Enable HTTP/2 so gRPC works.
         # https://cloud.google.com/run/docs/configuring/http2
         ports {

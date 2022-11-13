@@ -21,4 +21,5 @@ gcloud services enable cloudbuild.googleapis.com compute.googleapis.com
 gcloud projects add-iam-policy-binding $PROJECT_ID     --member serviceAccount:$CLOUDBUILD_SA --role roles/editor --role roles/iam.securityAdmin
 ```
 
-Then push to the `infra-dev` branch for the changes to take effect.
+Then push to the `main` branch for the changes to take effect.
+
