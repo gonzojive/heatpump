@@ -24,6 +24,17 @@ heat pump. The components of the system are as follows:
 
 ![screenshot of dashboard as of 2020/12/24](https://raw.githubusercontent.com/gonzojive/heatpump/main/docs/screenshot-2020-12-24.png "screenshot of dashboard as of 2020/12/24")
 
+There is also [work in progress](https://github.com/gonzojive/heatpump/issues/5)
+Google Home integration, which allows setting the temperature of the fan coil
+units from the Google Home app. You can also say commands like:
+
+* "Set the temperature to 72 degrees"
+* "Set the fan speed to low"
+
+![screenshot of dashboard as of
+2020/12/24](https://raw.githubusercontent.com/gonzojive/heatpump/main/docs/screenshot-google-home.png
+"screenshot of Google Home app for controlling fan coil units")
+
 ## Implementation notes
 
 This project is written in Go.
