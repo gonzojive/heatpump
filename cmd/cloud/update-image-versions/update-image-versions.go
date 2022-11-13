@@ -14,9 +14,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/heroku/docker-registry-client/registry"
 
-	dockerparser "github.com/novln/docker-parser"
 	"golang.org/x/oauth2/google"
 )
 
@@ -73,16 +71,14 @@ func processMapping(ctx context.Context, m *Mapping) (*Mapping, error) {
 		return nil, fmt.Errorf("failed to generate oauth token: %w", err)
 	}
 
+	authenticator := authn.FromConfig(authn.AuthConfig{
+		Username: "oauth2accesstoken",
+		Password: tok.AccessToken,
+	})
+
 	url, err := url.Parse(m.RegistryURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid registry URL %q: %w", m.RegistryURL, err)
-	}
-
-	username := "oauth2accesstoken" // anonymous
-	password := tok.AccessToken
-	hub, err := registry.New(url.String(), username, password)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create image registry client: %w", err)
 	}
 
 	out := *m
@@ -93,10 +89,12 @@ func processMapping(ctx context.Context, m *Mapping) (*Mapping, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse %q docker image spec %q: %w", k, entry.Spec, err)
 		}
-		img, err := remote.Image(ref2, remote.WithAuth(authn.FromConfig(authn.AuthConfig{
-			Username: "oauth2accesstoken",
-			Password: tok.AccessToken,
-		})))
+
+		if want, got := url.Host, ref2.Context().RegistryStr(); want != got {
+			return nil, fmt.Errorf("image spec %q has a 'spec' attribute with host %q, but the 'registry-url' hostname is %q; update the input JSON file to make the two hostnames match", k, got, want)
+		}
+
+		img, err := remote.Image(ref2, remote.WithAuth(authenticator))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get %q docker image: %w", k, err)
 		}
@@ -104,33 +102,10 @@ func processMapping(ctx context.Context, m *Mapping) (*Mapping, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to get %q manifest digest (i.e. image id): %w", k, err)
 		}
-		imageID, err := img.ConfigName()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get %q config name (i.e. image id): %w", k, err)
-		}
-		ref, err := dockerparser.Parse(entry.Spec)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse %q docker image spec %q: %w", k, entry.Spec, err)
-		}
-		if want, got := url.Host, ref.Registry(); want != got {
-			return nil, fmt.Errorf("image spec %q has a 'spec' attribute with host %q, but the 'registry-url' hostname is %q; update the input JSON file to make the two hostnames match", k, got, want)
-		}
 
-		//glog.Infof("%q: parsed remote as reg = %q, repo = %q, name = %q, shortname = %q, tag = %q", k, ref.Registry(), ref.Repository(), ref.Name(), ref.ShortName(), ref.Tag())
+		entry.Resolved = ref2.Context().Digest(manifestID.String()).String()
+		glog.Infof("resolved %q to %q", k, entry.Resolved)
 
-		digest, err := hub.ManifestDigest(ref.ShortName(), ref.Tag())
-		if err != nil {
-			return nil, fmt.Errorf("failed to get digest for entry %q: %w", k, err)
-		}
-		//glog.Infof("%q got manifest %+v w/digest %q", k, mf, digest)
-
-		glog.Infof("image info for %q:\n  config name = %q\n  manifest id = %q\n  other lib   = %q", k, imageID.String(), manifestID.String(), digest)
-
-		finalDigest := manifestID.String()
-
-		//digest, err := hub.ManifestDigest(ref.ShortName(), ref.Tag())
-		entry.Resolved = fmt.Sprintf("%s:%s", ref.Repository(), finalDigest)
-		//entry.Resolved = fmt.Sprintf("%s:main", ref.Repository())
 		out.Images[k] = entry
 	}
 	return &out, nil

@@ -3,19 +3,19 @@
   "images": {
     "auth-service": {
       "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/authservice-image:main",
-      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/authservice-image:sha256:950cd6b690442a74b0a321d491347067149204244d1d9aa37ad521bc595bbbeb"
+      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/authservice-image@sha256:950cd6b690442a74b0a321d491347067149204244d1d9aa37ad521bc595bbbeb"
     },
     "google-actions-http-endpoint": {
       "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint:main",
-      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint:sha256:c0ffcd3fd32044774ca8f56fb53b9d13afba636643a085cc8b0665dc5d7ead02"
+      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint@sha256:c0ffcd3fd32044774ca8f56fb53b9d13afba636643a085cc8b0665dc5d7ead02"
     },
     "queue-service": {
       "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/command-queue-service-image:main",
-      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/command-queue-service-image:sha256:a7309611a909fea1a9cd449998e3ff2183f7c049826cd02ada8abcbc6b8e76fd"
+      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/command-queue-service-image@sha256:a7309611a909fea1a9cd449998e3ff2183f7c049826cd02ada8abcbc6b8e76fd"
     },
     "state-service": {
       "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image:main",
-      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image:sha256:554de0a557c20a2bfa5f97c2689482e9a78fde11ffd958602c57e5d89b33e736"
+      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image@sha256:554de0a557c20a2bfa5f97c2689482e9a78fde11ffd958602c57e5d89b33e736"
     }
   }
 }
