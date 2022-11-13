@@ -16,7 +16,7 @@
 steps:
 - id: 'branch name'
   name: 'alpine'
-  entrypoint: 'sh'  
+  entrypoint: 'sh'
   args: 
   - '-c'
   - | 
@@ -25,7 +25,7 @@ steps:
       echo "***********************"
 
 - id: 'tf init'
-  name: 'hashicorp/terraform:1.0.0'
+  name: 'hashicorp/terraform:1.3.4'
   entrypoint: 'sh'
   args: 
   - '-c'
@@ -44,17 +44,17 @@ steps:
           echo "******* At environment: ${env} ********"
           echo "*************************************************"
           terraform init || exit 1
-          cd ../../
+          cd `git rev-parse --show-toplevel`
         done
       fi 
 
 # [START tf-plan]
 - id: 'tf plan'
-  name: 'hashicorp/terraform:1.0.0'
+  name: 'hashicorp/terraform:1.3.4'
   entrypoint: 'sh'
   args: 
   - '-c'
-  - | 
+  - |
       if [ -d "cloud/deployment/terraform/environments/$BRANCH_NAME/" ]; then
         cd cloud/deployment/terraform/environments/$BRANCH_NAME
         terraform plan
@@ -69,24 +69,34 @@ steps:
           echo "******* At environment: ${env} ********"
           echo "*************************************************"
           terraform plan || exit 1
-          cd ../../
+          cd `git rev-parse --show-toplevel`
         done
       fi 
 # [END tf-plan]
 
 # [START tf-apply]
 - id: 'tf apply'
-  name: 'hashicorp/terraform:1.0.0'
+  name: 'hashicorp/terraform:1.3.4'
   entrypoint: 'sh'
   args: 
   - '-c'
-  - | 
-      if [ -d "cloud/deployment/terraform/environments/$BRANCH_NAME/" ]; then
-        cd cloud/deployment/terraform/environments/$BRANCH_NAME      
-        terraform apply -auto-approve
+  - |
+      if [ "$BRANCH_NAME" = "main" ]; then
+        for dir in cloud/deployment/terraform/environments/*/
+        do
+          cd ${dir}
+          env=${dir%*/}
+          env=${env#*/}  
+          echo ""
+          echo "*************** TERRAFOM PLAN ******************"
+          echo "******* At environment: ${env} ********"
+          echo "*************************************************"
+          terraform apply -auto-approve || exit 1
+          cd `git rev-parse --show-toplevel`
+        done
       else
         echo "***************************** SKIPPING APPLYING *******************************"
-        echo "Branch '$BRANCH_NAME' does not represent an official environment."
+        echo "Branch '$BRANCH_NAME' is not 'main'."
         echo "*******************************************************************************"
       fi
 # [END tf-apply]      
