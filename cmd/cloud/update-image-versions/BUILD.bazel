@@ -9,7 +9,7 @@ go_library(
         "//util/cmdutil",
         "@com_github_golang_glog//:glog",
         "@com_github_heroku_docker_registry_client//registry",
-        "@com_github_novln_docker_parser//:go_default_library",
+        "@com_github_novln_docker_parser//:docker-parser",
         "@org_golang_x_oauth2//google",
     ],
 )

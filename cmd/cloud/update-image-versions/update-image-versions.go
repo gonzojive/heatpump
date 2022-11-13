@@ -56,10 +56,8 @@ type Mapping struct {
 }
 
 type ImageSpec struct {
-	Repository string `json:"repository"`
-	Reference  string `json:"reference"`
-	Remote     string `json:"remote,omitempty"`
-	Resolved   string `json:"resolved"`
+	Spec     string `json:"spec,omitempty"`
+	Resolved string `json:"resolved"`
 }
 
 func processMapping(ctx context.Context, m *Mapping) (*Mapping, error) {
@@ -86,20 +84,22 @@ func processMapping(ctx context.Context, m *Mapping) (*Mapping, error) {
 
 	out := *m
 	for k, entry := range out.Images {
-		digest, err := hub.ManifestDigest(entry.Repository, entry.Reference)
+		ref, err := dockerparser.Parse(entry.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %q docker image spec %q: %w", k, entry.Spec, err)
+		}
+		if want, got := url.Host, ref.Registry(); want != got {
+			return nil, fmt.Errorf("image spec %q has a 'spec' attribute with host %q, but the 'registry-url' hostname is %q; update the input JSON file to make the two hostnames match", k, got, want)
+		}
+
+		glog.Infof("%q: parsed remote as reg = %q, repo = %q, name = %q, shortname = %q, tag = %q", k, ref.Registry(), ref.Repository(), ref.Name(), ref.ShortName(), ref.Tag())
+
+		digest, err := hub.ManifestDigest(ref.ShortName(), ref.Tag())
 		if err != nil {
 			return nil, fmt.Errorf("failed to get digest for entry %q: %w", k, err)
 		}
-		entry.Resolved = fmt.Sprintf("%s/%s@%s", url.Hostname(), entry.Repository, digest.String())
+		entry.Resolved = fmt.Sprintf("%s@%s", ref.Registry(), digest.String())
 		out.Images[k] = entry
-
-		if entry.Remote != "" {
-			ref, err := dockerparser.Parse(entry.Remote)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse %q docker image spec %q: %w", k, entry.Remote, err)
-			}
-			glog.Infof("parsed remote as reg = %q, repo = %q, name = %q, shortname = %q, tag = %q", ref.Registry(), ref.Repository(), ref.Name(), ref.ShortName(), ref.Tag())
-		}
 	}
 	return &out, nil
 }
