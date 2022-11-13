@@ -55,6 +55,13 @@ resource "google_project_service" "firestore" {
   disable_dependent_services = true
 }
 
+resource "google_project_service" "iam" {
+  project = var.project
+  service = "iam.googleapis.com"
+
+  disable_dependent_services = true
+}
+
 # Create service accounts (robots) and establish their permissions.
 resource "google_service_account" "google_actions_http_job" {
   project = var.project
