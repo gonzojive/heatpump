@@ -15,6 +15,7 @@ container_push(
     image = ":image",
     registry = "us-west4-docker.pkg.dev",
     repository = "heatpump-dev/project-images/http-endpoint",
+    tag = "main",
 )
 
 go_library(
