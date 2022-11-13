@@ -240,8 +240,11 @@ resource "google_cloud_run_service" "auth_service" {
         # https://cloud.google.com/run/docs/configuring/http2
         ports {
           name           = "h2c"
-          container_port = 8089
+          container_port = 8092
         }
+        args = [
+          "--grpc-port", 8092,
+        ]
       }
     }
 
@@ -290,6 +293,32 @@ resource "google_cloud_run_service_iam_policy" "noauth_command_queue_service" {
   service  = google_cloud_run_service.command_queue_service.name
 
   policy_data = data.google_iam_policy.noauth.policy_data
+}
+
+# Secret names
+#
+# Do not store secret information in terraform. Use the command line or the GCP
+# UI to store secret material. However, we can use Terraform to create secret
+# resources and specify who has access to them. The contents of the secrets are
+# stored in "secret versions" in GCP parlance and are specified elsewhere.
+resource "google_secret_manager_secret" "device_token_signer_private_rsa" {
+  project = var.project
+  secret_id = "device-token-signer-private-rsa"
+
+  replication {
+    automatic = true
+  }
+}
+
+resource "google_secret_manager_secret_iam_binding" "binding" {
+  project = var.project
+  secret_id = google_secret_manager_secret.device_token_signer_private_rsa.secret_id
+
+  role = "roles/secretmanager.secretAccessor"
+  
+  members = [
+    google_service_account.auth_service_job.member,
+  ]
 }
 
 module "pubsub_iot_commands" {
