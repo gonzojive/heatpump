@@ -78,6 +78,24 @@ resource "google_service_account" "google_actions_http_job" {
   display_name = "Cloud Run user for Google Actions HTTP responder"
 }
 
+resource "google_service_account" "auth_service_job" {
+  project      = var.project
+  account_id   = "auth-service-job"
+  display_name = "Cloud Run user for AuthService gRPC service that issues tokens to IoT clients."
+}
+
+resource "google_service_account" "state_service_job" {
+  project      = var.project
+  account_id   = "state-service-job"
+  display_name = "Cloud Run user for StateService gRPC service that stores device state."
+}
+
+resource "google_service_account" "command_queue_service_job" {
+  project      = var.project
+  account_id   = "command-queue-service-job"
+  display_name = "Cloud Run user for StateService gRPC service that stores device state."
+}
+
 # App Engine Admin API.
 resource "google_project_service" "appengine" {
   project = var.project
@@ -116,6 +134,7 @@ resource "google_cloud_run_service" "google_actions_http_endpoint" {
 
   template {
     spec {
+      service_account_name = google_service_account.google_actions_http_job.email
       containers {
         # To debug:
         # bazel run //cmd/reverse-proxy:push-image
@@ -128,7 +147,6 @@ resource "google_cloud_run_service" "google_actions_http_endpoint" {
           "--state-service-addr", "state-service-6mavwogfvq-wn.a.run.app:443",
         ]
       }
-      service_account_name = google_service_account.google_actions_http_job.email
     }
   }
 }
@@ -146,6 +164,7 @@ resource "google_cloud_run_service" "command_queue_service" {
 
   template {
     spec {
+      service_account_name = google_service_account.command_queue_service_job.email
       containers {
         # bazel run //cmd/queueserver:push-image
         image = local.image_versions["queue-service"].resolved
@@ -179,6 +198,7 @@ resource "google_cloud_run_service" "state_service" {
 
   template {
     spec {
+      service_account_name = google_service_account.state_service_job.email
       containers {
         # bazel run //cmd/stateservice:push-image
         image = local.image_versions["state-service"].resolved
@@ -199,38 +219,39 @@ resource "google_cloud_run_service" "state_service" {
   }
 }
 
-# resource "google_cloud_run_service" "auth_service" {
-#   name     = "auth-service"
-#   location = local.gcp_location
+resource "google_cloud_run_service" "auth_service" {
+  name     = "auth-service"
+  location = local.gcp_location
 
-#   metadata {
-#     annotations = {
-#       "run.googleapis.com/client-name" = "terraform"
-#       "run.googleapis.com/ingress"     = "all"
-#     }
-#   }
+  metadata {
+    annotations = {
+      "run.googleapis.com/client-name" = "terraform"
+      "run.googleapis.com/ingress"     = "all"
+    }
+  }
 
-#   template {
-#     spec {
-#       containers {
-#         # bazel run //cmd/authservice:push-image
-#         image = local.image_versions["auth-service"].resolved
-#         # Enable HTTP/2 so gRPC works.
-#         # https://cloud.google.com/run/docs/configuring/http2
-#         ports {
-#           name           = "h2c"
-#           container_port = 8092
-#         }
-#       }
-#     }
+  template {
+    spec {
+      service_account_name = google_service_account.auth_service_job.email
+      containers {
+        # bazel run //cmd/authservice:push-image
+        image = local.image_versions["auth-service"].resolved
+        # Enable HTTP/2 so gRPC works.
+        # https://cloud.google.com/run/docs/configuring/http2
+        ports {
+          name           = "h2c"
+          container_port = 8089
+        }
+      }
+    }
 
-#     metadata {
-#       annotations = {
-#         "autoscaling.knative.dev/maxScale" = "1"
-#       }
-#     }
-#   }
-# }
+    metadata {
+      annotations = {
+        "autoscaling.knative.dev/maxScale" = "1"
+      }
+    }
+  }
+}
 
 data "google_iam_policy" "noauth" {
   binding {
@@ -255,13 +276,13 @@ resource "google_cloud_run_service_iam_policy" "noauth_state_service" {
   policy_data = data.google_iam_policy.noauth.policy_data
 }
 
-# resource "google_cloud_run_service_iam_policy" "noauth_auth_service" {
-#   location = google_cloud_run_service.auth_service.location
-#   project  = google_cloud_run_service.auth_service.project
-#   service  = google_cloud_run_service.auth_service.name
+resource "google_cloud_run_service_iam_policy" "noauth_auth_service" {
+  location = google_cloud_run_service.auth_service.location
+  project  = google_cloud_run_service.auth_service.project
+  service  = google_cloud_run_service.auth_service.name
 
-#   policy_data = data.google_iam_policy.noauth.policy_data
-# }
+  policy_data = data.google_iam_policy.noauth.policy_data
+}
 
 resource "google_cloud_run_service_iam_policy" "noauth_command_queue_service" {
   location = google_cloud_run_service.command_queue_service.location
