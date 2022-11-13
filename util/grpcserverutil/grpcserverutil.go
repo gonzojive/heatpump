@@ -96,3 +96,23 @@ func RegisterAddressFlag[ClientT any](
 	fs.StringVar(&f.addr, name, defaultVal, usage)
 	return f
 }
+
+// SystemTLSCredentials returns the standard transport credentials for connecting
+// to a TLS server.
+func SystemTLSCredentials() (credentials.TransportCredentials, error) {
+	// Load certificate of the CA who signed server's certificate.
+	certPool, err := func() (*x509.CertPool, error) {
+		certPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load system cert pool: %w", err)
+		}
+		return certPool, nil
+	}()
+
+	if err != nil {
+		return nil, err
+	}
+	return credentials.NewTLS(&tls.Config{
+		RootCAs: certPool,
+	}), nil
+}

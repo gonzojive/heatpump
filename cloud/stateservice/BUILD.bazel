@@ -10,6 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/acls",
+        "//cloud/acls/server2serverauth",
         "//cloud/google/cloudconfig",
         "//proto/controller",
         "@com_github_golang_glog//:glog",

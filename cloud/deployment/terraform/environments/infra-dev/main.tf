@@ -55,6 +55,12 @@ resource "google_project_service" "firestore" {
   disable_dependent_services = true
 }
 
+# Create service accounts (robots) and establish their permissions.
+resource "google_service_account" "google_actions_http_job" {
+  project = var.project
+  account_id   = "google-actions-http-job"
+  display_name = "Cloud Run user for Google Actions HTTP responder"
+}
 
 # App Engine Admin API.
 resource "google_project_service" "appengine" {
@@ -95,9 +101,18 @@ resource "google_cloud_run_service" "google_actions_http_endpoint" {
   template {
     spec {
       containers {
+        # To debug:
         # bazel run //cmd/reverse-proxy:push-image
-        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/reverse-proxy-image@sha256:af1a876b41dd8977927efe7fca81d16869b045652c4c63b1e4442faa0854f4ce"
+        #
+        # To start the real server:
+        # bazel run //cmd/cloud/http-endpoint
+        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint@sha256:9bf8231e968aa47adf49a7f1f9b3a7b22024db8709496510dfd746ee7c122f9e"
+        args = [
+          "--alsologtostderr",
+          "--state-service-addr", "state-service-6mavwogfvq-wn.a.run.app:443",
+        ]
       }
+      service_account_name = google_service_account.google_actions_http_job.email
     }
   }
 }
@@ -150,7 +165,7 @@ resource "google_cloud_run_service" "state_service" {
     spec {
       containers {
         # bazel run //cmd/stateservice:push-image
-        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image@sha256:0a480e08794147437170dd0c0af7aa92e953bec99d852e943ceb45b3cfd3b1a9"
+        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image@sha256:554de0a557c20a2bfa5f97c2689482e9a78fde11ffd958602c57e5d89b33e736"
         # Enable HTTP/2 so gRPC works.
         # https://cloud.google.com/run/docs/configuring/http2
         ports {

@@ -22,12 +22,14 @@ import (
 const fixmeUserID = "4242"
 
 type Service struct {
-	sh *smarthome.Service
+	ssc cpb.StateServiceClient
+	sh  *smarthome.Service
 }
 
 func NewService(psc *pubsub.Client, ssc cpb.StateServiceClient) *Service {
 	return &Service{
-		sh: smarthome.NewService(zap.L(), &validator{}, &fulfilmentService{
+		ssc,
+		smarthome.NewService(zap.L(), &validator{}, &fulfilmentService{
 			ssc:              ssc,
 			commandPublisher: newCommandPublisher(psc),
 			fanCoilUnit: map[string]fanCoilUnit{
@@ -46,6 +48,25 @@ func NewService(psc *pubsub.Client, ssc cpb.StateServiceClient) *Service {
 // GoogleFulfillmentHandler returns a handler for fulfillment requests.
 func (s *Service) GoogleFulfillmentHandler() http.Handler {
 	return http.HandlerFunc(s.sh.GoogleFulfillmentHandler)
+}
+
+// DebugHandler returns a handler for debug requests.
+func (s *Service) DebugHandler() http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		state, err := s.ssc.GetDeviceState(r.Context(), &cpb.GetDeviceStateRequest{
+			Name: "",
+		})
+		if err != nil {
+			rw.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			rw.WriteHeader(http.StatusInternalServerError)
+			rw.Write(([]byte)(fmt.Sprintf("error with GetDeviceState: %v", err)))
+			return
+		}
+		rw.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		rw.WriteHeader(http.StatusOK)
+		rw.Write(([]byte)(fmt.Sprintf("GetDeviceState got:\n %s", prototext.Format(state))))
+
+	})
 }
 
 type validator struct{}

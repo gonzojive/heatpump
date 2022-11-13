@@ -172,10 +172,10 @@ def go_dependencies():
     )
     go_repository(
         name = "com_github_dgraph_io_badger_v3",
+        build_file_proto_mode = "disable",
         importpath = "github.com/dgraph-io/badger/v3",
         sum = "h1:Hmyof0WMEF/QtutX5SQHzIMnJQxb/IrSzhjckV2SD6g=",
         version = "v3.2011.1",
-        build_file_proto_mode = "disable",
     )
     go_repository(
         name = "com_github_dgraph_io_ristretto",

@@ -33,6 +33,7 @@ func NewServer(ctx context.Context, mux *http.ServeMux, cloudParams *cloudconfig
 	if err := registerFulfillmentHandlers(ctx, mux, cloudParams, stateService); err != nil {
 		return nil, fmt.Errorf("error bringing up fulfillment server: %w", err)
 	}
+
 	return &Server{}, nil
 }
 
@@ -52,5 +53,6 @@ func registerFulfillmentHandlers(ctx context.Context, mux *http.ServeMux, cloudP
 	// Fulfillment path configured at
 	// https://console.actions.google.com/u/0/project/hydronics-9f50d/actions/smarthome/
 	mux.Handle("/fulfillment", svc.GoogleFulfillmentHandler())
+	mux.Handle("/debug", svc.DebugHandler())
 	return nil
 }
