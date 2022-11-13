@@ -14,13 +14,6 @@
 
 
 steps:
-- id: 'test before releasing'
-  name: 'gcr.io/cloud-builders/bazel'
-  entrypoint: 'sh'
-  args:
-  - '-c'
-  - |
-      bazel test //...
 - id: 'push container images'
   name: 'gcr.io/cloud-builders/bazel'
   entrypoint: 'sh'
