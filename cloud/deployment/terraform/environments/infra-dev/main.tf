@@ -122,7 +122,7 @@ resource "google_cloud_run_service" "google_actions_http_endpoint" {
         #
         # To start the real server:
         # bazel run //cmd/cloud/http-endpoint
-        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint@sha256:9bf8231e968aa47adf49a7f1f9b3a7b22024db8709496510dfd746ee7c122f9e"
+        image = local.image_versions["google-actions-http-endpoint"].resolved
         args = [
           "--alsologtostderr",
           "--state-service-addr", "state-service-6mavwogfvq-wn.a.run.app:443",
@@ -181,7 +181,7 @@ resource "google_cloud_run_service" "state_service" {
     spec {
       containers {
         # bazel run //cmd/stateservice:push-image
-        image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image:main"
+        image = local.image_versions["state-service"].resolved
         # Enable HTTP/2 so gRPC works.
         # https://cloud.google.com/run/docs/configuring/http2
         ports {
@@ -214,7 +214,7 @@ resource "google_cloud_run_service" "state_service" {
 #     spec {
 #       containers {
 #         # bazel run //cmd/authservice:push-image
-#         image = "us-west4-docker.pkg.dev/heatpump-dev/project-images/authservice-image@sha256:7b8df3707487ca9f7fafd7d2b9f1514ac8fd71b55b33e311cc5dd44ae283068b"
+#         image = local.image_versions["auth-service"].resolved
 #         # Enable HTTP/2 so gRPC works.
 #         # https://cloud.google.com/run/docs/configuring/http2
 #         ports {
