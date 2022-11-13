@@ -695,7 +695,7 @@ def go_dependencies():
         importpath = "github.com/rmrobinson/google-smart-home-action-go",
         # sum = "h1:Umo2jL3qWW5k00KOsSsqMoJg7Bm0/w7arJpVONzL9bU=",
         # version = "v0.0.0-20210104014003-093fc5a47d97",
-        commit = "64a026a8478267ec9f645406f7cc44ecfa88ec78",
+        commit = "dc33a8d3d592e6c1296e2ca7d492557831b9d141",
         vcs = "git",
         remote = "https://github.com/gonzojive/google-smart-home-action-go.git",
     )
