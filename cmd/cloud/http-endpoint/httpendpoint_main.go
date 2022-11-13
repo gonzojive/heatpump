@@ -15,10 +15,20 @@ import (
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/cloud/google/cloudconfig"
 	"github.com/gonzojive/heatpump/cloud/httpendpoint"
+	"github.com/gonzojive/heatpump/util/grpcserverutil"
+	"google.golang.org/grpc"
+
+	cpb "github.com/gonzojive/heatpump/proto/controller"
 )
 
 var (
 	port = flag.Int("port", 42598, "Local port to use for HTTP server.")
+
+	stateServiceAddr = grpcserverutil.AddressFlag(
+		"state-service-addr", "localhost:8089", "Remote address of StateService.",
+		func(ctx context.Context, conn *grpc.ClientConn) (cpb.StateServiceClient, error) {
+			return cpb.NewStateServiceClient(conn), nil
+		})
 )
 
 func main() {
@@ -32,8 +42,12 @@ func run(ctx context.Context) error {
 
 	serveMux := http.DefaultServeMux
 
-	_, err := httpendpoint.NewServer(ctx, serveMux, cloudconfig.DefaultParams())
+	ssc, err := stateServiceAddr.Dial(ctx, grpc.WithInsecure())
 	if err != nil {
+		return fmt.Errorf("error dialing StateService: %w", err)
+	}
+
+	if _, err := httpendpoint.NewServer(ctx, serveMux, cloudconfig.DefaultParams(), ssc); err != nil {
 		return err
 	}
 

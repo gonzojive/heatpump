@@ -14,11 +14,14 @@ import (
 	"cloud.google.com/go/pubsub"
 	"github.com/gonzojive/heatpump/cloud/google/cloudconfig"
 	"github.com/gonzojive/heatpump/cloud/google/server/fulfilment"
+
+	cpb "github.com/gonzojive/heatpump/proto/controller"
 )
 
-type Server struct{}
+type Server struct {
+}
 
-func NewServer(ctx context.Context, mux *http.ServeMux, cloudParams *cloudconfig.Params) (*Server, error) {
+func NewServer(ctx context.Context, mux *http.ServeMux, cloudParams *cloudconfig.Params, stateService cpb.StateServiceClient) (*Server, error) {
 	{
 		s, err := NewAccountLinkingServer(ctx, cloudParams)
 		if err != nil {
@@ -27,7 +30,7 @@ func NewServer(ctx context.Context, mux *http.ServeMux, cloudParams *cloudconfig
 		s.RegisterHandlers(mux)
 	}
 
-	if err := registerFulfillmentHandlers(ctx, mux, cloudParams); err != nil {
+	if err := registerFulfillmentHandlers(ctx, mux, cloudParams, stateService); err != nil {
 		return nil, fmt.Errorf("error bringing up fulfillment server: %w", err)
 	}
 	return &Server{}, nil
@@ -38,13 +41,13 @@ func NewServer(ctx context.Context, mux *http.ServeMux, cloudParams *cloudconfig
 // https://developers.google.com/assistant/smarthome/concepts/fulfillment-authentication
 // and configured at
 // https://console.actions.google.com/u/0/project/hydronics-9f50d/actions/smarthome/.
-func registerFulfillmentHandlers(ctx context.Context, mux *http.ServeMux, cloudParams *cloudconfig.Params) error {
+func registerFulfillmentHandlers(ctx context.Context, mux *http.ServeMux, cloudParams *cloudconfig.Params, stateService cpb.StateServiceClient) error {
 	psc, err := pubsub.NewClient(ctx, cloudParams.GCPProject)
 	if err != nil {
 		return fmt.Errorf("failed to initialize pubsub client: %w", err)
 	}
 
-	svc := fulfilment.NewService(psc)
+	svc := fulfilment.NewService(psc, stateService)
 
 	// Fulfillment path configured at
 	// https://console.actions.google.com/u/0/project/hydronics-9f50d/actions/smarthome/

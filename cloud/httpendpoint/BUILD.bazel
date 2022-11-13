@@ -13,6 +13,7 @@ go_library(
         "//cloud/google/server/fulfilment",
         "//cloud/oauthstore",
         "//cloud/secrets",
+        "//proto/controller",
         "@com_github_go_oauth2_oauth2_v4//errors",
         "@com_github_go_oauth2_oauth2_v4//manage",
         "@com_github_go_oauth2_oauth2_v4//models",

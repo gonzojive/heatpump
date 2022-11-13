@@ -6,10 +6,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/cloud/acls"
 	"github.com/gonzojive/heatpump/cloud/google/cloudconfig"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/prototext"
 
 	cpb "github.com/gonzojive/heatpump/proto/controller"
 )
@@ -38,7 +40,8 @@ func New(ctx context.Context, projectParams *cloudconfig.Params) (*Service, erro
 func (s *Service) GetDeviceState(ctx context.Context, req *cpb.GetDeviceStateRequest) (*cpb.DeviceState, error) {
 	identity, err := s.aclsService.IdentityFromContext(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "Client must pass a %q gRPC metadata header to identify the device using a DeviceAccessToken: %v", acls.DeviceAccessTokenMetadataKey, err)
+		identity = acls.FixmeMainHardcodedIdentity()
+		//return nil, status.Errorf(codes.Unauthenticated, "Client must pass a %q gRPC metadata header to identify the device using a DeviceAccessToken: %v", acls.DeviceAccessTokenMetadataKey, err)
 	}
 	state, err := s.db.GetDeviceState(ctx, identity, req.GetName())
 	if err != nil {
@@ -57,6 +60,8 @@ func (s *Service) SetDeviceState(ctx context.Context, req *cpb.SetDeviceStateReq
 	if state == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "must specify state field")
 	}
+
+	glog.Infof("set device state for %q to %s", state.GetName(), prototext.Format(state))
 
 	if err := s.db.StoreDeviceState(ctx, identity, state); err != nil {
 		return nil, status.Errorf(codes.Internal, "error storing device state: %v", err)

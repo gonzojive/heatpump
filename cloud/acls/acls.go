@@ -54,6 +54,8 @@ var (
 	}
 )
 
+func FixmeMainHardcodedIdentity() *Identity { return hardcodedIdentities[0] }
+
 // Identity is information about a user or robot account.
 type Identity struct {
 	// Base64-encoded public keys of the user. These are used to extract an

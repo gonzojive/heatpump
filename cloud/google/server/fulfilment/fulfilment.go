@@ -4,15 +4,19 @@ package fulfilment
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"cloud.google.com/go/pubsub"
-	"go.uber.org/zap"
-
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/proto/fancoil"
+	"github.com/gonzojive/heatpump/util/must"
 	smarthome "github.com/rmrobinson/google-smart-home-action-go"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/prototext"
+
+	cpb "github.com/gonzojive/heatpump/proto/controller"
 )
 
 const fixmeUserID = "4242"
@@ -21,9 +25,10 @@ type Service struct {
 	sh *smarthome.Service
 }
 
-func NewService(psc *pubsub.Client) *Service {
+func NewService(psc *pubsub.Client, ssc cpb.StateServiceClient) *Service {
 	return &Service{
 		sh: smarthome.NewService(zap.L(), &validator{}, &fulfilmentService{
+			ssc:              ssc,
 			commandPublisher: newCommandPublisher(psc),
 			fanCoilUnit: map[string]fanCoilUnit{
 				"xyz": {
@@ -67,47 +72,90 @@ type fanCoilUnit struct {
 type temperature float64
 
 func tempFromFahrenheit(fDegrees float64) temperature {
-	return temperature(fDegrees-32) * 5 / 9
+	return tempFromCelcius(fDegrees-32) * 5 / 9
+}
+
+func tempFromCelcius(fDegrees float64) temperature {
+	return temperature(fDegrees)
 }
 
 func (t temperature) Celcius() float64    { return float64(t) }
 func (t temperature) Fahrenheit() float64 { return (t.Celcius() * 9 / 5) + 32 }
 
-func (dev *fanCoilUnit) GetState() smarthome.DeviceState {
+func (dev *fanCoilUnit) GetState(ctx context.Context, ssc cpb.StateServiceClient) (*smarthome.DeviceState, error) {
+
+	stateResp, err := ssc.GetDeviceState(ctx, &cpb.GetDeviceStateRequest{
+		Name: "", //dev.id,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve state of device %q from StateService: %w", dev.id, err)
+	}
+
 	// See https://developers.google.com/assistant/smarthome/guides/thermostat#sample-query-response
 	s := smarthome.NewDeviceState(true)
-	s.State["thermostatMode"] = dev.mode
-	s.State["thermostatTemperatureSetpoint"] = dev.thermostatTemperatureSetpoint.Celcius()
-	s.State["thermostatTemperatureAmbient"] = dev.thermostatTemperatureAmbient.Celcius()
-	// "thermostatHumidityAmbient"
-	return s
+
+	switch stateResp.GetFancoilState().GetMode() {
+	case fancoil.Mode_MODE_COOLING:
+		s.State["thermostatMode"] = "cool"
+		s.State["thermostatTemperatureSetpoint"] = stateResp.GetFancoilState().GetCoolingTargetTemperature().GetDegreesCelcius()
+	case fancoil.Mode_MODE_HEATING:
+		s.State["thermostatMode"] = "heat"
+		s.State["thermostatTemperatureSetpoint"] = stateResp.GetFancoilState().GetHeatingTargetTemperature().GetDegreesCelcius()
+
+	default:
+		s.State["thermostatMode"] = "heat"
+		s.State["thermostatTemperatureSetpoint"] = stateResp.GetFancoilState().GetHeatingTargetTemperature().GetDegreesCelcius()
+	}
+
+	switch setting := stateResp.GetFancoilState().GetCurrentFanSetting(); setting {
+	case fancoil.FanSetting_FAN_SETTING_UNSPECIFIED:
+		glog.Errorf("unknown fan speed state %v", stateResp.GetFancoilState().GetCurrentFanSetting())
+	default:
+		s.State["currentFanSpeedSetting"] = fanSettingToName(setting)
+	}
+
+	s.State["thermostatTemperatureAmbient"] = stateResp.GetFancoilState().GetRoomTemperature().GetDegreesCelcius()
+
+	glog.Infof("state of fan coil unit: %s", prototext.Format(stateResp))
+
+	return &s, nil
 }
 
 type fulfilmentService struct {
 	commandPublisher *commandPublisher
 
 	fanCoilUnit map[string]fanCoilUnit
+
+	ssc cpb.StateServiceClient
 }
 
-func (srv *fulfilmentService) Sync(context.Context, string) (*smarthome.SyncResponse, error) {
+// Returns the list of devices associated with the given user and their capabilities.
+func (fs *fulfilmentService) Sync(ctx context.Context, userID string) (*smarthome.SyncResponse, error) {
 	glog.Infof("sync")
 
 	resp := &smarthome.SyncResponse{}
-	for _, fcu := range srv.fanCoilUnit {
+
+	glog.Infof("got request to sync for user id %q", userID)
+
+	for _, fcu := range fs.fanCoilUnit {
 		// Fan coil units have built-in thermostats.
+		//dev := smarthome.NewDevice(fcu.id, "action.devices.types.THERMOSTAT")
 		dev := smarthome.NewDevice(fcu.id, "action.devices.types.THERMOSTAT")
+
 		dev.Traits["action.devices.traits.TemperatureSetting"] = true
 		dev.Attributes["availableThermostatModes"] = []string{
 			"off",
 			"heat",
 			"cool",
-			"on",
 		}
 		dev.Attributes["thermostatTemperatureRange"] = map[string]int{
 			"minThresholdCelsius": 15,
 			"maxThresholdCelsius": 30,
 		}
 		dev.Attributes["thermostatTemperatureUnit"] = "F"
+
+		fancoilFanSpeedAttribute.AddToDevice(dev)
+
 		dev.Name = smarthome.DeviceName{
 			DefaultNames: []string{"Chiltrix Fan Coil Unit"},
 			Name:         fcu.name,
@@ -124,15 +172,17 @@ func (srv *fulfilmentService) Sync(context.Context, string) (*smarthome.SyncResp
 		resp.Devices = append(resp.Devices, dev)
 	}
 
+	glog.Infof("sync response: %s", string(must.Value(json.MarshalIndent(resp, "", "  "))))
+
 	return resp, nil
 }
 
-func (es *fulfilmentService) Disconnect(context.Context, string) error {
+func (fs *fulfilmentService) Disconnect(context.Context, string) error {
 	glog.Infof("disconnect")
 	return nil
 }
 
-func (es *fulfilmentService) Query(_ context.Context, req *smarthome.QueryRequest) (*smarthome.QueryResponse, error) {
+func (fs *fulfilmentService) Query(ctx context.Context, req *smarthome.QueryRequest) (*smarthome.QueryResponse, error) {
 	glog.Infof("query")
 
 	resp := &smarthome.QueryResponse{
@@ -140,39 +190,55 @@ func (es *fulfilmentService) Query(_ context.Context, req *smarthome.QueryReques
 	}
 
 	for _, deviceArg := range req.Devices {
-		if dev, found := es.fanCoilUnit[deviceArg.ID]; found {
-			resp.States[deviceArg.ID] = dev.GetState()
+
+		glog.Infof("query for device %q...", deviceArg.ID)
+
+		deviceName := deviceArg.ID
+		if dev, found := fs.fanCoilUnit[deviceName]; found {
+			state, err := dev.GetState(ctx, fs.ssc)
+			if err != nil {
+				glog.Warningf("query for device %q returned error: %v", deviceArg.ID, err)
+				return nil, err
+			} else {
+				glog.Infof("got state for device %q: %s", deviceArg.ID, string(must.Value(json.MarshalIndent(*state, "", "  "))))
+				resp.States[deviceName] = *state
+			}
+		} else {
+			glog.Warningf("query for device %q didn't find device")
 		}
 	}
 
 	return resp, nil
 }
-func (es *fulfilmentService) Execute(ctx context.Context, req *smarthome.ExecuteRequest) (*smarthome.ExecuteResponse, error) {
-	glog.Infof("Execute")
+func (fs *fulfilmentService) Execute(ctx context.Context, req *smarthome.ExecuteRequest) (*smarthome.ExecuteResponse, error) {
+	glog.Infof("Execute command %s", string(must.Value(json.MarshalIndent(req, "", "  "))))
 	resp := &smarthome.ExecuteResponse{
 		UpdatedState: smarthome.NewDeviceState(true),
 	}
 	for _, cmd := range req.Commands {
 		for _, target := range cmd.TargetDevices {
-			fcu, ok := es.fanCoilUnit[target.ID]
+			fcu, ok := fs.fanCoilUnit[target.ID]
 			if !ok {
 				continue
 			}
 			for _, cmdObj := range cmd.Commands {
-				parsedCmd, err := parseTemperatureSettingCommand(cmdObj.Generic)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse command for %q: %w", target.ID, err)
-				}
+				if parsed := cmdObj.SetFanSpeed; parsed != nil && parsed.FanSpeed != nil {
+					setting := fanSettingFromName(*parsed.FanSpeed)
+					glog.Infof("setting fan speed to to %q (%s)", *parsed.FanSpeed, setting)
 
-				switch c := parsedCmd.(type) {
-				// https://developers.google.com/assistant/smarthome/traits/temperaturesetting#action.devices.commands.thermostattemperaturesetpoint
-				case setSetpointCommand:
-					fcu.thermostatTemperatureSetpoint = c.Setpoint
-					glog.Infof("setpoint adjusted to %f", c.Setpoint.Fahrenheit())
 					resp.UpdatedDevices = append(resp.UpdatedDevices, fcu.id)
-					es.commandPublisher.executeFanCoilCommand(ctx, &fancoil.SetStateRequest{
+					fs.commandPublisher.executeFanCoilCommand(ctx, &fancoil.SetStateRequest{
+						PreferenceFanSetting: setting,
+					})
+				}
+				if parsed := cmdObj.ThermostatTemperatureSetpoint; parsed != nil {
+					// https://developers.google.com/assistant/smarthome/traits/temperaturesetting#action.devices.commands.thermostattemperaturesetpoint
+					fcu.thermostatTemperatureSetpoint = tempFromCelcius(float64(parsed.ThermostatTemperatureSetpointCelcius))
+					glog.Infof("setpoint adjusted to %f", fcu.thermostatTemperatureSetpoint.Fahrenheit())
+					resp.UpdatedDevices = append(resp.UpdatedDevices, fcu.id)
+					fs.commandPublisher.executeFanCoilCommand(ctx, &fancoil.SetStateRequest{
 						HeatingTargetTemperature: &fancoil.Temperature{
-							DegreesCelcius: float32(c.Setpoint.Celcius()),
+							DegreesCelcius: float32(fcu.thermostatTemperatureSetpoint.Celcius()),
 						},
 					})
 				}
@@ -182,25 +248,32 @@ func (es *fulfilmentService) Execute(ctx context.Context, req *smarthome.Execute
 	return resp, nil
 }
 
-func parseTemperatureSettingCommand(cmdObj *smarthome.CommandGeneric) (any, error) {
-	switch cmdObj.Command {
-	// https://developers.google.com/assistant/smarthome/traits/temperaturesetting#action.devices.commands.thermostattemperaturesetpoint
-	case "action.devices.commands.ThermostatTemperatureSetpoint":
-		val := cmdObj.Params["thermostatTemperatureSetpoint"]
-		switch val := val.(type) {
-		case float64:
-			return setSetpointCommand{
-				Setpoint: temperature(val),
-			}, nil
-		default:
-			return nil, fmt.Errorf("invalid request has bad thermostatTemperatureSetpoint param %v", val)
-		}
-	default:
-		return nil, fmt.Errorf("couldn't parse command %q: %+v", cmdObj.Command, cmdObj.Params)
-	}
-}
+// func parseGenericCommand(cmdObj *smarthome.CommandGeneric) (any, error) {
+// 	switch cmdObj.Command {
+// 	// https://developers.google.com/assistant/smarthome/traits/temperaturesetting#action.devices.commands.thermostattemperaturesetpoint
+// 	case "action.devices.commands.ThermostatTemperatureSetpoint":
+// 		val := cmdObj.Params["thermostatTemperatureSetpoint"]
+// 		switch val := val.(type) {
+// 		case float64:
+// 			return setSetpointCommand{
+// 				Setpoint: temperature(val),
+// 			}, nil
+// 		default:
+// 			return nil, fmt.Errorf("invalid request has bad thermostatTemperatureSetpoint param %v", val)
+// 		}
+// 	case "action.devices.commands.SetFanSpeed":
+// 		jsonBytes, err := json.Marshal(cmdObj.Params)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		parsed := &SetFanSpeedNameCommand{}
+// 		json.Unmarshal(data []byte, v any)
+// 	default:
+// 		return nil, fmt.Errorf("couldn't parse command %q: %+v", cmdObj.Command, cmdObj.Params)
+// 	}
+// }
 
-type setSetpointCommand struct {
-	// Target temperature setpoint. Supports up to one decimal place.
-	Setpoint temperature `json:"thermostatTemperatureSetpoint`
-}
+// type setSetpointCommand struct {
+// 	// Target temperature setpoint. Supports up to one decimal place.
+// 	Setpoint temperature `json:"thermostatTemperatureSetpoint`
+// }
