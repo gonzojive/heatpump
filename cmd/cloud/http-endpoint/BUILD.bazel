@@ -14,8 +14,7 @@ container_push(
     format = "Docker",
     image = ":image",
     registry = "us-west4-docker.pkg.dev",
-    repository = "heatpump-dev/project-images/hello-world-image",
-    tag = "tag1",
+    repository = "heatpump-dev/project-images/http-endpoint",
 )
 
 go_library(
@@ -24,6 +23,7 @@ go_library(
     importpath = "github.com/gonzojive/heatpump/cmd/cloud/http-endpoint",
     visibility = ["//visibility:private"],
     deps = [
+        "//cloud/acls/server2serverauth",
         "//cloud/google/cloudconfig",
         "//cloud/httpendpoint",
         "//proto/controller",

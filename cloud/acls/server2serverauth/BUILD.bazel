@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "server2serverauth",
+    srcs = ["server2serverauth.go"],
+    importpath = "github.com/gonzojive/heatpump/cloud/acls/server2serverauth",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//util/must",
+        "@com_github_golang_glog//:glog",
+        "@org_golang_google_api//idtoken",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//metadata",
+        "@org_golang_x_oauth2//:oauth2",
+    ],
+)

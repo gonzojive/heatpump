@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/golang/glog"
+	"github.com/gonzojive/heatpump/cloud/acls/server2serverauth"
 	"github.com/gonzojive/heatpump/cloud/google/cloudconfig"
 	"github.com/gonzojive/heatpump/cloud/httpendpoint"
 	"github.com/gonzojive/heatpump/util/grpcserverutil"
@@ -29,6 +30,8 @@ var (
 		func(ctx context.Context, conn *grpc.ClientConn) (cpb.StateServiceClient, error) {
 			return cpb.NewStateServiceClient(conn), nil
 		})
+
+	insecureS2S = flag.Bool("insecure-s2s", false, "If true, disable server-to-server auth.")
 )
 
 func main() {
@@ -39,10 +42,29 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-
 	serveMux := http.DefaultServeMux
 
-	ssc, err := stateServiceAddr.Dial(ctx, grpc.WithInsecure())
+	var ssOpts []grpc.DialOption
+
+	{
+	}
+	if *insecureS2S {
+		ssOpts = append(ssOpts, grpc.WithInsecure())
+	} else {
+		creds, err := grpcserverutil.SystemTLSCredentials()
+		if err != nil {
+			return err
+		}
+		ssOpts = append(ssOpts, grpc.WithTransportCredentials(creds))
+
+		sender, err := server2serverauth.NewSender(ctx, "stateservice")
+		if err != nil {
+			return err
+		}
+		ssOpts = append(ssOpts, grpc.WithPerRPCCredentials(sender.PerRPCCredentials()))
+	}
+
+	ssc, err := stateServiceAddr.Dial(ctx, ssOpts...) //, grpc.WithInsecure())
 	if err != nil {
 		return fmt.Errorf("error dialing StateService: %w", err)
 	}
