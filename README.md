@@ -116,3 +116,32 @@ You can then run the scheduler on the device:
 ```shell
 go run fancoil/cmd/fancoil_schedule/fancoil_schedule.go --alsologtostderr --fancoil-service localhost:8083
 ```
+
+
+# Cloud services
+
+For the Google Home app integration to work, some cloud-hosted services are
+needed. These can be deployed as follows:
+
+## 1) Build and push docker images
+
+(optional): Build the docker images used to run all of the services. This is
+also done automatically by a Cloud Build hook that is triggered by pushes to
+`main`, but it can be useful for pushing local images.
+
+```shell
+./cloud/deployment/cloudbuild/image-pusher/push-all-images.sh
+```
+
+## 2) Update the images referenced by the Terraform config
+
+Terraform is used to deploy the Cloud Run images based on the contents of
+`cloud/deployment/terraform/environments/infra-dev/image-versions.json`, which
+is pulled into the main terraform config
+`cloud/deployment/terraform/environments/infra-dev/main.tf`.
+
+To update the pinned version of the images, run the following:
+
+```shell
+bazel run --run_under="cd $PWD &&" //cmd/cloud/update-image-versions -- --alsologtostderr --input "cloud/deployment/terraform/environments/infra-dev/image-versions.json" --output "cloud/deployment/terraform/environments/infra-dev/image-versions.json"
+```
