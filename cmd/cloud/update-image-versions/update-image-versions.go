@@ -11,6 +11,9 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/gonzojive/heatpump/util/cmdutil"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/heroku/docker-registry-client/registry"
 
 	dockerparser "github.com/novln/docker-parser"
@@ -84,6 +87,27 @@ func processMapping(ctx context.Context, m *Mapping) (*Mapping, error) {
 
 	out := *m
 	for k, entry := range out.Images {
+		// NOTE: This is the best documentation of the terminology related to images that I have found.
+		// https://github.com/google/go-containerregistry/blob/main/pkg/v1/remote/README.md
+		ref2, err := name.ParseReference(entry.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse %q docker image spec %q: %w", k, entry.Spec, err)
+		}
+		img, err := remote.Image(ref2, remote.WithAuth(authn.FromConfig(authn.AuthConfig{
+			Username: "oauth2accesstoken",
+			Password: tok.AccessToken,
+		})))
+		if err != nil {
+			return nil, fmt.Errorf("failed to get %q docker image: %w", k, err)
+		}
+		manifestID, err := img.Digest()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get %q manifest digest (i.e. image id): %w", k, err)
+		}
+		imageID, err := img.ConfigName()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get %q config name (i.e. image id): %w", k, err)
+		}
 		ref, err := dockerparser.Parse(entry.Spec)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse %q docker image spec %q: %w", k, entry.Spec, err)
@@ -92,13 +116,21 @@ func processMapping(ctx context.Context, m *Mapping) (*Mapping, error) {
 			return nil, fmt.Errorf("image spec %q has a 'spec' attribute with host %q, but the 'registry-url' hostname is %q; update the input JSON file to make the two hostnames match", k, got, want)
 		}
 
-		glog.Infof("%q: parsed remote as reg = %q, repo = %q, name = %q, shortname = %q, tag = %q", k, ref.Registry(), ref.Repository(), ref.Name(), ref.ShortName(), ref.Tag())
+		//glog.Infof("%q: parsed remote as reg = %q, repo = %q, name = %q, shortname = %q, tag = %q", k, ref.Registry(), ref.Repository(), ref.Name(), ref.ShortName(), ref.Tag())
 
 		digest, err := hub.ManifestDigest(ref.ShortName(), ref.Tag())
 		if err != nil {
 			return nil, fmt.Errorf("failed to get digest for entry %q: %w", k, err)
 		}
-		entry.Resolved = fmt.Sprintf("%s@%s", ref.Registry(), digest.String())
+		//glog.Infof("%q got manifest %+v w/digest %q", k, mf, digest)
+
+		glog.Infof("image info for %q:\n  config name = %q\n  manifest id = %q\n  other lib   = %q", k, imageID.String(), manifestID.String(), digest)
+
+		finalDigest := manifestID.String()
+
+		//digest, err := hub.ManifestDigest(ref.ShortName(), ref.Tag())
+		entry.Resolved = fmt.Sprintf("%s:%s", ref.Repository(), finalDigest)
+		//entry.Resolved = fmt.Sprintf("%s:main", ref.Repository())
 		out.Images[k] = entry
 	}
 	return &out, nil
