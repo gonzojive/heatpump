@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "update-image-versions_lib",
+    srcs = ["update-image-versions.go"],
+    importpath = "github.com/gonzojive/heatpump/cmd/cloud/update-image-versions",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//util/cmdutil",
+        "@com_github_golang_glog//:glog",
+        "@com_github_heroku_docker_registry_client//registry",
+        "@com_github_novln_docker_parser//:go_default_library",
+        "@org_golang_x_oauth2//google",
+    ],
+)
+
+go_binary(
+    name = "update-image-versions",
+    embed = [":update-image-versions_lib"],
+    visibility = ["//visibility:public"],
+)
