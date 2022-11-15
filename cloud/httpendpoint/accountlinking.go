@@ -33,7 +33,7 @@ const (
 	// https://console.actions.google.com/u/0/project/hydronics-9f50d/smarthomeaccountlinking/
 	//
 	// This is the name of that secret in the Google Cloud Secret Manager.
-	googleClientSecretRef secrets.Name = "projects/heatpump-dev/secrets/google-actions-oauth-client-secret/versions/1"
+	googleClientSecretRef secrets.Name = "projects/heatpump-dev/secrets/google-actions-oauth-client-secret/versions/latest"
 
 	// Domain of redirect URL to expect from the Google Actions client.
 	//
@@ -64,7 +64,7 @@ func NewAccountLinkingServer(ctx context.Context, cloudParams *cloudconfig.Param
 	// token memory store
 	fsClient, err := createFirestoreClient(ctx, cloudParams.GCPProject)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating firestore client: %w", err)
 	}
 
 	tokenStore := oauthstore.NewTokenStorage(fsClient, cloudParams.TokenStoreFirebaseCollectionName)
@@ -82,12 +82,12 @@ func NewAccountLinkingServer(ctx context.Context, cloudParams *cloudconfig.Param
 	service.oauthServer.SetClientInfoHandler(oauthserver.ClientFormHandler)
 
 	service.oauthServer.SetInternalErrorHandler(func(err error) (re *errors.Response) {
-		glog.Infof("Internal Error:", err.Error())
+		glog.Errorf("internal error handler got: %v", err)
 		return
 	})
 
 	service.oauthServer.SetResponseErrorHandler(func(re *errors.Response) {
-		glog.Infof("Response Error: %s", re.Error.Error())
+		glog.Errorf("Response Error: %+v", re)
 	})
 
 	service.oauthServer.SetUserAuthorizationHandler(func(rw http.ResponseWriter, req *http.Request) (userID string, err error) {
