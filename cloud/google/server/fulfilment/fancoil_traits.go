@@ -60,7 +60,7 @@ var fancoilFanSpeedAttribute = FanSpeedAttributes{
 				},
 			},
 			{
-				SpeedName: fanSettingToName(fancoil.FanSetting_FAN_SETTING_AUTO),
+				SpeedName: fanSettingToName(fancoil.FanSetting_FAN_SETTING_HIGH),
 				SpeedValues: []FanSpeedValue{
 					{
 						SpeedSynonym: []string{"High"},
