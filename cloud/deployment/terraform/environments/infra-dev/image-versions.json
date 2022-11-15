@@ -7,7 +7,7 @@
     },
     "google-actions-http-endpoint": {
       "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint:main",
-      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint@sha256:5b9036efbe78fd1b2ed5e0f5ffaa7c6b45f213cbc79921aca2bd784036e9cccf"
+      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint@sha256:a7157868e35764097e1706e8480d48877307d4e4411e351ebb8eb7d0bcdf9cc9"
     },
     "queue-service": {
       "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/command-queue-service-image:main",

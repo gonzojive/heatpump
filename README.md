@@ -145,3 +145,12 @@ To update the pinned version of the images, run the following:
 ```shell
 bazel run --run_under="cd $PWD &&" //cmd/cloud/update-image-versions -- --alsologtostderr --input "cloud/deployment/terraform/environments/infra-dev/image-versions.json" --output "cloud/deployment/terraform/environments/infra-dev/image-versions.json"
 ```
+
+## 3) Configure the Actions Console settings
+
+The following linkes might need to be updated if the Cloud Run deployment
+changes significantly:
+
+https://console.actions.google.com/u/0/project/hydronics-9f50d/actions/smarthome/
+https://console.actions.google.com/u/0/project/hydronics-9f50d/smarthomeaccountlinking/
+

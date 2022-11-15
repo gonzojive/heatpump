@@ -64,6 +64,20 @@ resource "google_project_service" "firestore" {
   disable_dependent_services = true
 }
 
+
+resource "google_project_iam_binding" "firebase_readwrite" {
+  project = var.project
+  # Yes, datastore.owner, not firestore.
+  #
+  # See https://cloud.google.com/firestore/docs/security/iam
+  role    = "roles/datastore.owner"
+
+  members = [
+    google_service_account.state_service_job.member,
+    google_service_account.google_actions_http_job.member,
+  ]
+}
+
 resource "google_project_service" "iam" {
   project = var.project
   service = "iam.googleapis.com"
@@ -310,7 +324,7 @@ resource "google_secret_manager_secret" "device_token_signer_private_rsa" {
   }
 }
 
-resource "google_secret_manager_secret_iam_binding" "binding" {
+resource "google_secret_manager_secret_iam_binding" "device_token_signer_private_rsa" {
   project = var.project
   secret_id = google_secret_manager_secret.device_token_signer_private_rsa.secret_id
 
@@ -320,6 +334,27 @@ resource "google_secret_manager_secret_iam_binding" "binding" {
     google_service_account.auth_service_job.member,
   ]
 }
+
+resource "google_secret_manager_secret" "google_actions_oauth_client_secret" {
+  project = var.project
+  secret_id = "google-actions-oauth-client-secret"
+
+  replication {
+    automatic = true
+  }
+}
+
+resource "google_secret_manager_secret_iam_binding" "google_actions_oauth_client_secret" {
+  project = var.project
+  secret_id = google_secret_manager_secret.google_actions_oauth_client_secret.secret_id
+
+  role = "roles/secretmanager.secretAccessor"
+  
+  members = [
+    google_service_account.google_actions_http_job.member,
+  ]
+}
+
 
 module "pubsub_iot_commands" {
   source  = "terraform-google-modules/pubsub/google"

@@ -25,6 +25,7 @@ package oauthstore
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -73,33 +74,57 @@ var _ oauth2.TokenStore = (*TokenStore)(nil)
 func (f *TokenStore) Create(ctx context.Context, info oauth2.TokenInfo) error {
 	t, err := token(info)
 	if err != nil {
-		return err
+		return fmt.Errorf("internal error: token conversion failed")
 	}
-	return f.c.Put(ctx, t)
+	if err := f.c.Put(ctx, t); err != nil {
+		return fmt.Errorf("Create token failed for firebase token store: %w", err)
+	}
+	return nil
 }
 
 func (f *TokenStore) RemoveByCode(ctx context.Context, code string) error {
-	return f.c.Del(ctx, keyCode, code)
+	if err := f.c.Del(ctx, keyCode, code); err != nil {
+		return fmt.Errorf("RemoveByCode failed fore firebase token store: %w", err)
+	}
+	return nil
 }
 
 func (f *TokenStore) RemoveByAccess(ctx context.Context, access string) error {
-	return f.c.Del(ctx, keyAccess, access)
+	if err := f.c.Del(ctx, keyAccess, access); err != nil {
+		return fmt.Errorf("RemoveByAccess failed fore firebase token store: %w", err)
+	}
+	return nil
 }
 
 func (f *TokenStore) RemoveByRefresh(ctx context.Context, refresh string) error {
-	return f.c.Del(ctx, keyRefresh, refresh)
+	if err := f.c.Del(ctx, keyRefresh, refresh); err != nil {
+		return fmt.Errorf("RemoveByRefresh failed fore firebase token store: %w", err)
+	}
+	return nil
 }
 
 func (f *TokenStore) GetByCode(ctx context.Context, code string) (oauth2.TokenInfo, error) {
-	return f.c.Get(ctx, keyCode, code)
+	if x, err := f.c.Get(ctx, keyCode, code); err != nil {
+		return nil, fmt.Errorf("GetByCode failed for firebase token store: %w", err)
+	} else {
+		return x, nil
+	}
 }
 
 func (f *TokenStore) GetByAccess(ctx context.Context, access string) (oauth2.TokenInfo, error) {
-	return f.c.Get(ctx, keyAccess, access)
+	if x, err := f.c.Get(ctx, keyAccess, access); err != nil {
+		return nil, fmt.Errorf("GetByAccess failed for firebase token store: %w", err)
+	} else {
+		return x, nil
+	}
 }
 
 func (f *TokenStore) GetByRefresh(ctx context.Context, refresh string) (oauth2.TokenInfo, error) {
-	return f.c.Get(ctx, keyRefresh, refresh)
+	if x, err := f.c.Get(ctx, keyRefresh, refresh); err != nil {
+		return nil, fmt.Errorf("GetByRefresh failed for firebase token store: %w", err)
+	} else {
+		return x, nil
+	}
 }
 
 // ErrInvalidTokenInfo is returned whenever TokenInfo is either nil or zero/empty.

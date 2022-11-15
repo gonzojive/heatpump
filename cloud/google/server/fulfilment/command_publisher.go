@@ -6,9 +6,10 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	"github.com/gonzojive/heatpump/cloud/google/cloudconfig"
-	cpb "github.com/gonzojive/heatpump/proto/controller"
 	"github.com/gonzojive/heatpump/proto/fancoil"
 	"google.golang.org/protobuf/proto"
+
+	cpb "github.com/gonzojive/heatpump/proto/controller"
 )
 
 type commandPublisher struct {

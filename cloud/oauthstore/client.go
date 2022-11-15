@@ -25,6 +25,7 @@ package oauthstore
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -53,7 +54,7 @@ func runInTransaction[T any](ctx context.Context, client *firestore.Client, fn f
 		return err
 	}, opts...); err != nil {
 		var zero T
-		return zero, err
+		return zero, fmt.Errorf("transaction failed: %w", err)
 	}
 	return result, nil
 }
