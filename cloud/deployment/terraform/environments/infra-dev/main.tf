@@ -355,23 +355,50 @@ resource "google_secret_manager_secret_iam_binding" "google_actions_oauth_client
   ]
 }
 
+resource "google_pubsub_topic" "iot_commands" {
+  project = var.project
+  name = "iot-commands"
+  message_retention_duration = "432000s" // 5 days
+}
 
-module "pubsub_iot_commands" {
-  source  = "terraform-google-modules/pubsub/google"
-  version = "~> 4.0.1"
+resource "google_pubsub_subscription" "iot_commands_queue_server" {
+  project = var.project
+  topic = google_pubsub_topic.iot_commands.name
+  name  = "queueserver_pull_1"
 
-  topic                            = "iot-commands"
-  project_id                       = var.project
-  topic_message_retention_duration = "432000s" // 5 days
-  push_subscriptions               = []
-  pull_subscriptions = [
-    {
-      name                         = "queueserver_pull_1" // required
-      ack_deadline_seconds         = 60                   // optional
-      max_delivery_attempts        = 5                    // optional
-      maximum_backoff              = "600s"               // optional
-      minimum_backoff              = "10s"                // optional
-      enable_exactly_once_delivery = true                 // optional
-    }
+  labels = {}
+
+  enable_exactly_once_delivery = true
+  enable_message_ordering    = false
+
+  # 20 minutes
+  retain_acked_messages      = false
+  ack_deadline_seconds = 60
+  message_retention_duration = google_pubsub_topic.iot_commands.message_retention_duration
+
+  expiration_policy {
+    ttl = "2678400s"
+  }
+  retry_policy {
+    maximum_backoff = "600s"
+    minimum_backoff = "10s"
+  }
+}
+
+resource "google_pubsub_topic_iam_binding" "iot_commands_publisher" {
+  project = google_pubsub_topic.iot_commands.project
+  topic = google_pubsub_topic.iot_commands.name
+  role = "roles/pubsub.publisher"
+  members = [
+    google_service_account.google_actions_http_job.member,
+  ]
+}
+
+resource "google_pubsub_subscription_iam_binding" "iot_commands_queue_server" {
+  project = google_pubsub_topic.iot_commands.project
+  subscription = google_pubsub_subscription.iot_commands_queue_server.name
+  role = "roles/pubsub.subscriber"
+  members = [
+    google_service_account.command_queue_service_job.member,
   ]
 }
