@@ -105,7 +105,8 @@ type listener struct {
 }
 
 func (l *listener) handleSetStateRequest(ctx context.Context, req *fcpb.SetStateRequest) error {
-	glog.Infof("setting target temperature to %vC", req.GetHeatingTargetTemperature())
+	glog.Infof("setting state of fan coild unit %q: %s", req.GetFancoilName(), prototext.MarshalOptions{}.Format(req))
+
 	if _, err := l.fancoilClient.SetState(ctx, req); err != nil {
 		return fmt.Errorf("command failed to execute: %w", err)
 	}
@@ -115,7 +116,7 @@ func (l *listener) handleSetStateRequest(ctx context.Context, req *fcpb.SetState
 	if err != nil {
 		return fmt.Errorf("failed to get fan coil state: %w", err)
 	}
-	glog.Infof("setting state for device %q: %s", req.GetFancoilName(), prototext.Format(stateResp.GetState()))
+	glog.Infof("updating state for device in cloud %q: %s", req.GetFancoilName(), prototext.MarshalOptions{}.Format(stateResp.GetState()))
 	if _, err := l.stateClient.SetDeviceState(ctx, &cpb.SetDeviceStateRequest{
 		State: &cpb.DeviceState{
 			Name:         req.GetFancoilName(),
@@ -124,6 +125,7 @@ func (l *listener) handleSetStateRequest(ctx context.Context, req *fcpb.SetState
 	}); err != nil {
 		return fmt.Errorf("error updating state in cloud service: %w", err)
 	}
+
 	return nil
 }
 

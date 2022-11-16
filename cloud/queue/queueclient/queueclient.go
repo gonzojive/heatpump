@@ -7,10 +7,16 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
+	"github.com/gonzojive/heatpump/util/retry"
+
 	qpb "github.com/gonzojive/heatpump/proto/command_queue"
 )
 
 const mainTopic = "thermostat-commands"
+
+var retryConfig = &retry.Config{
+	IsRetriable: func(err error) bool { return true },
+}
 
 // New returns a wrapped version of the command queue service client.
 func New(rawProtoClient qpb.CommandQueueServiceClient) *Client {
@@ -24,41 +30,52 @@ type Client struct {
 }
 
 func (c *Client) Listen(ctx context.Context, handler func(command *Command)) error {
-	stream, err := c.raw.Listen(ctx)
-	if err != nil {
-		return fmt.Errorf("error initiating RPC: %w", err)
-	}
-
-	if err := stream.Send(&qpb.ListenRequest{
-		Request: &qpb.ListenRequest_SubscribeRequest_{
-			SubscribeRequest: &qpb.ListenRequest_SubscribeRequest{
-				Topics: []string{mainTopic},
-			},
-		},
-	}); err != nil {
-		return err
-	}
-
-	for {
-		got, err := stream.Recv()
+	listenAndProcessMessages := func(ctx context.Context) error {
+		stream, err := c.raw.Listen(ctx)
 		if err != nil {
-			return fmt.Errorf("error while waiting for commands: %w", err)
+			return fmt.Errorf("error initiating RPC: %w", err)
 		}
 
-		if msg := got.GetMessageResponse(); msg != nil {
-			glog.Infof("got message %q", string(msg.GetPayload()))
+		if err := stream.Send(&qpb.ListenRequest{
+			Request: &qpb.ListenRequest_SubscribeRequest_{
+				SubscribeRequest: &qpb.ListenRequest_SubscribeRequest{
+					Topics: []string{mainTopic},
+				},
+			},
+		}); err != nil {
+			return err
+		}
 
-			cmd := &Command{
-				stream:    stream,
-				messageID: msg.GetId(),
-				payload:   msg.GetPayload(),
+		for {
+			glog.Infof("waiting for message from queue server...")
+			got, err := stream.Recv()
+			if err != nil {
+				return fmt.Errorf("error while waiting for commands: %w", err)
 			}
-			go func() {
-				defer cmd.Nack()
-				handler(cmd)
-			}()
+
+			if msg := got.GetMessageResponse(); msg != nil {
+				glog.Infof("got message %q", string(msg.GetPayload()))
+
+				cmd := &Command{
+					stream:    stream,
+					messageID: msg.GetId(),
+					payload:   msg.GetPayload(),
+				}
+				go func() {
+					defer cmd.Nack()
+					handler(cmd)
+				}()
+			}
 		}
 	}
+
+	return retryConfig.Start(ctx, func(ctx context.Context) error {
+		if err := listenAndProcessMessages(ctx); err != nil {
+			glog.Errorf("error while processing messages, retrying: %v", err)
+			return err
+		}
+		return nil
+	})
 }
 
 type Command struct {
