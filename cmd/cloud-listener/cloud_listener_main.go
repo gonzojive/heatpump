@@ -21,9 +21,9 @@ import (
 )
 
 var (
-	insecure              = flag.Bool("command-queue-insecure", false, "If true, don't use TLS connection to command queue server.")
 	fancoilServiceAddress = flag.String("fancoil-service-addr", "192.168.86.24:8083", "Remote address of fancoil service.")
 	queueAddr             = flag.String("command-queue-addr", "localhost:8083", "Remote address of CommandQueueService.")
+	insecure              = flag.Bool("command-queue-insecure", false, "If true, don't use TLS connection to command queue server.")
 	stateServiceAddr      = grpcserverutil.AddressFlag(
 		"state-service-addr", "localhost:8089", "Remote address of StateService.",
 		func(ctx context.Context, conn *grpc.ClientConn) (cpb.StateServiceClient, error) {
@@ -41,11 +41,10 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	// creds, err := deviceauth.LoadTLSCredentials(authClientFlags)
-	// if err != nil {
-	// 	return err
-	// }
-	// dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
+	secureDialOpts, err := grpcserverutil.TLS.DialOptions()
+	if err != nil {
+		return err
+	}
 
 	cmdClient, err := dialCommandQueue(ctx, authClientFlags)
 	if err != nil {
@@ -57,7 +56,7 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	stateClient, err := stateServiceAddr.Dial(ctx, grpc.WithInsecure())
+	stateClient, err := stateServiceAddr.Dial(ctx, secureDialOpts...)
 	if err != nil {
 		return err
 	}
