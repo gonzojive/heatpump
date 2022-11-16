@@ -179,6 +179,9 @@ resource "google_cloud_run_service" "command_queue_service" {
   template {
     spec {
       service_account_name = google_service_account.command_queue_service_job.email
+
+      timeout_seconds = 3600
+
       containers {
         # bazel run //cmd/queueserver:push-image
         image = local.image_versions["queue-service"].resolved
