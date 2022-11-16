@@ -40,6 +40,12 @@ resource "google_project_service" "cloudrun" {
   disable_dependent_services = true
 }
 
+resource "google_project_service" "homegraph" {
+  project = var.project
+  service = "homegraph.googleapis.com"
+  disable_dependent_services = true
+}
+
 resource "google_project_service" "secretmanager" {
   project = var.project
   service = "secretmanager.googleapis.com"
