@@ -2,7 +2,7 @@ name: go-mod-verify
 run-name: Ensure go.mod file is valid
 on: [push]
 jobs:
-  Bazel-Build-And-Test:
+  go-mod-verify:
     runs-on: ubuntu-latest
     steps:
       - run: echo "The job was automatically triggered by a ${{ github.event_name }} event."
