@@ -1,4 +1,4 @@
-name: go mod verify
+name: go-mod-verify
 run-name: Ensure go.mod file is valid
 on: [push]
 jobs:
