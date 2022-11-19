@@ -3,11 +3,11 @@
   "images": {
     "auth-service": {
       "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/authservice-image:main",
-      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/authservice-image@sha256:c4d7d55569b3356bf3d669880a956ea992341aa135e29f6c1683f7bfa56ef3fb"
+      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/authservice-image@sha256:84fbd3a2c417e04a521fc6b0624f321ff4d26a9aef34c42e8b1ea21b3e825af3"
     },
     "google-actions-http-endpoint": {
       "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint:main",
-      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint@sha256:d184b9a80de4730258982e2558bbc8ec0c645560caeb7a82f1112a7ab788162c"
+      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/http-endpoint@sha256:ae1dee2b006ca802d0f282717b6006e8e792e4e3f87684d75fda0777cff5b200"
     },
     "queue-service": {
       "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/command-queue-service-image:main",
@@ -15,7 +15,7 @@
     },
     "state-service": {
       "spec": "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image:main",
-      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image@sha256:62c9a8e3f87d0afad31d9d609b98feff52105e02c86e080fe5ec11547d3aaaac"
+      "resolved": "us-west4-docker.pkg.dev/heatpump-dev/project-images/stateservice-image@sha256:5b3995b18d67c27063d8bf5c77d3cd49848dda0a06ace1e42927a4223a7c7706"
     }
   }
 }
