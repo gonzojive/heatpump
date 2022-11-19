@@ -2,7 +2,7 @@ module github.com/gonzojive/heatpump
 
 go 1.18
 
-replace github.com/rmrobinson/google-smart-home-action-go => /home/red/code/google-smart-home-action-go
+// replace github.com/rmrobinson/google-smart-home-action-go => github.com/gonzojive/google-smart-home-action-go v0.0.1
 
 //replace github.com/goburrow/serial => /home/pi/code/serial
 
