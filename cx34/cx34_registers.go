@@ -164,7 +164,7 @@ func (s *State) DeltaT() units.Temperature {
 	return s.ACOutletWaterTemp() - s.ACInletWaterTemp()
 }
 
-// ACMode returns the outlet temperature minust he inlet temperature
+// ACMode returns current AirConditioningMode
 func (s *State) ACMode() AirConditioningMode {
 	raw := s.registerValues[ACMode]
 	mode, err := parseAirConditioningMode(raw)
@@ -175,19 +175,24 @@ func (s *State) ACMode() AirConditioningMode {
 }
 
 // AirConditioningMode specifies whether the heat pump is configured to heat,
-// cool, heat+domestic hot water, or cool+domestic hot water.
+// cool, domestic hot water, heat+domestic hot water, or cool+domestic hot water.
 type AirConditioningMode uint8
 
 // Valid AirConditioningMode values.
 const (
-	AirConditioningModeCooling AirConditioningMode = 0
-	AirConditioningModeHeating AirConditioningMode = 1
-	// Heat+DHW, Cool+DHW are options but I'm unsure of the values.
+	AirConditioningModeCooling       AirConditioningMode = 0
+	AirConditioningModeHeating       AirConditioningMode = 1
+	AirConditioningModeDHW           AirConditioningMode = 2
+	AirConditioningModeCoolingAndDHW AirConditioningMode = 3
+	AirConditioningModeHeatingAndDHW AirConditioningMode = 4
 )
 
 var validACModes = map[AirConditioningMode]struct{}{
-	AirConditioningModeCooling: {},
-	AirConditioningModeHeating: {},
+	AirConditioningModeCooling:       {},
+	AirConditioningModeHeating:       {},
+	AirConditioningModeDHW:           {},
+	AirConditioningModeCoolingAndDHW: {},
+	AirConditioningModeHeatingAndDHW: {},
 }
 
 func parseAirConditioningMode(val uint16) (AirConditioningMode, error) {
@@ -251,6 +256,7 @@ Table of registers with values that changed
 
 // Known Register values.
 const (
+	SwitchOnOff                Register = 140 // 0 = off, 1 = on
 	ACMode                     Register = 141 // 0 = cool, 1 = heat
 	TargetACCoolingModeTemp    Register = 142
 	TargetACHeatingModeTemp    Register = 143
@@ -323,6 +329,7 @@ const (
 
 // Source: https://www.chiltrix.com/control-options/Remote-Gateway-BACnet-Guide-rev2.pdf
 var registerNames = map[Register]string{
+	SwitchOnOff:             "SwitchOnOff",
 	ACMode:                  "ACMode",
 	TargetACCoolingModeTemp: "TargetACCoolingModeTemp",
 	TargetACHeatingModeTemp: "TargetACHeatingModeTemp",
