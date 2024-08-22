@@ -58,8 +58,8 @@ Vesion	1.0			update:
 | 28319   | 6E9F | 03/10         | Whether to use Fahrenheit                | （1-℉；0-℃）                                                                                                             | DIGI1  |
 | 28320   | 6EA0 | 03/10         | Master/Slave                             | （1-Yes；0-No）                                                                                                          | DIGI1  |
 | 28321   | 6EA1 | 03/10         | Unit address                             | （1～99）The default value is 15                                                                                         | DIGI1  |
-| 46801   | B6D1 | 04            | Room temperature                         |                                                                                                                       | TEMP1  |
-| 46802   | B6D2 | 04            | Coil temperature                         |                                                                                                                       | TEMP1  |
+| 46801   | B6D1 | 04            | Room temperature                         |  Only 1℃ resolution but in T*10 format                                                                               | TEMP1  |
+| 46802   | B6D2 | 04            | Coil temperature                         |  Only 1℃ resolution but in T*10 format                                                                               | TEMP1  |
 | 46803   | B6D3 | 04            | Current fan speed                        | 0 Off；1 Ultra-low speed； 2 Low speed；3 Medium speed；4 High speed；5 Top speed；6 Auto                                   | DIGI1  |
 | 46804   | B6D4 | 04            | Fan revolution                           | 0～2000 （rpm）                                                                                                          | TEMP1  |
 | 46805   | B6D5 | 04            | Electromagnetic Valve                    | 0 Off； 1 On                                                                                                           | DIGI1  |
