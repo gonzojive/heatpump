@@ -42,17 +42,17 @@ Vesion	1.0			update:
 | 28301   | 6E8D | 03/10         | On/Off                                   | 0=off,1=on                                                                                                            | DIGI1  |
 | 28302   | 6E8E | 03/10         | Mode                                     | 0～auto；1～cooling;2～dehumidification；3～ventilate；4～heating；                                                            | DIGI1  |
 | 28303   | 6E8F | 03/10         | Fanspeed                                 | 2～low speed；3～medium speed； 4～high speed；<br>6～aotu                                                                   | DIGI1  |
-| 28306   | 6E92 | 03/10         | Timer off                                |                                                                                                                       | DIGI1  |
-| 28307   | 6E93 | 03/10         | Timer off                                |                                                                                                                       | DIGI1  |
+| 28306   | 6E92 | 03/10         | Timer off                                | 1-11=set a timer in hours after which to turn unit off. Any other value turns off the timer.                     | DIGI1  |
+| 28307   | 6E93 | 03/10         | Timer on                                | 1-11=set a timer in hours after which to turn unit on. Any other value turns off the timer.                     | DIGI1  |
 | 28308   | 6E94 | 03/10         | Max. set temperature                     | （\-9～96）℃                                                                                                             | DIGI1  |
 | 28309   | 6E95 | 03/10         | Min. set temperature                     | （\-9～96）℃                                                                                                             | DIGI1  |
 | 28310   | 6E96 | 03/10         | Cooling set temperature                  |                                                                                                                       | TEMP1  |
 | 28311   | 6E97 | 03/10         | heating set temperature                  |                                                                                                                       | TEMP1  |
 | 28312   | 6E98 | 03/10         | Cooling set temperature at auto mode     |                                                                                                                       | TEMP1  |
 | 28313   | 6E99 | 03/10         | heating set temperature at auto mode     |                                                                                                                       | TEMP1  |
-| 28314   | 6E9A | 03/10         | Anti-cooling wind setting temperature    | （5～40）℃                                                                                                               | TEMP1  |
-| 28315   | 6E9B | 03/10         | Whether to start anti-hot wind function  | （1-Yes；0-No）                                                                                                          | DIGI1  |
-| 28316   | 6E9C | 03/10         | Whether to start ultra-low wind function | （1-Yes；0-No）                                                                                                          | DIGI1  |
+| 28314   | 6E9A | 03/10         | Anti-cooling wind setting temperature    | （5～40）℃ In heating mode, if the coil temp is lower than this value, the fan motor will stop.                      | TEMP1  |
+| 28315   | 6E9B | 03/10         | Whether to enable anti-hot wind function  | （1-Yes；0-No）In cooling mode, if the coil temp. is higher than 68°F, the fan motor will stop.                      | DIGI1  |
+| 28316   | 6E9C | 03/10         | Whether to enable ultra-low wind function in heat mode | （1-Yes；0-No）                                                                                            | DIGI1  |
 | 28317   | 6E9D | 03/10         | Whether to use vavle                     | （1-Yes；0-No）                                                                                                          | DIGI1  |
 | 28318   | 6E9E | 03/10         | Whether to use floor heating             | （1-Yes；0-No）                                                                                                          | DIGI1  |
 | 28319   | 6E9F | 03/10         | Whether to use Fahrenheit                | （1-℉；0-℃）                                                                                                             | DIGI1  |
