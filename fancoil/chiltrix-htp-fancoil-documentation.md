@@ -42,8 +42,10 @@ Vesion	1.0			update:
 | 28301   | 6E8D | 03/10         | On/Off                                   | 0=off,1=on                                                                                                            | DIGI1  |
 | 28302   | 6E8E | 03/10         | Mode                                     | 0～auto；1～cooling;2～dehumidification；3～ventilate；4～heating；                                                            | DIGI1  |
 | 28303   | 6E8F | 03/10         | Fanspeed                                 | 2～low speed；3～medium speed； 4～high speed；<br>6～aotu                                                                   | DIGI1  |
-| 28306   | 6E92 | 03/10         | Timer off                                | 1-11=set a timer in hours after which to turn unit off. Any other value turns off the timer.                     | DIGI1  |
-| 28307   | 6E93 | 03/10         | Timer on                                | 1-11=set a timer in hours after which to turn unit on. Any other value turns off the timer.                     | DIGI1  |
+| 28306   | 6E92 | 03/10         | Timer off                                | 1-11=set a timer in hours after which to turn unit off.                           
+                                       | DIGI1  |
+| 28307   | 6E93 | 03/10         | Timer on                                | 1-11=set a timer in hours after which to turn unit on.                            
+                                       | DIGI1  |
 | 28308   | 6E94 | 03/10         | Max. set temperature                     | （\-9～96）℃                                                                                                             | DIGI1  |
 | 28309   | 6E95 | 03/10         | Min. set temperature                     | （\-9～96）℃                                                                                                             | DIGI1  |
 | 28310   | 6E96 | 03/10         | Cooling set temperature                  |                                                                                                                       | TEMP1  |
