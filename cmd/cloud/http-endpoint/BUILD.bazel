@@ -1,22 +1,27 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
-load("@io_bazel_rules_docker//go:image.bzl", "go_image")
-load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 
-go_image(
+pkg_tar(
+    name = "image_layer",
+    srcs = [":http-endpoint"],
+)
+
+oci_image(
     name = "image",
-    embed = [":http-endpoint_lib"],
-    # srcs = ["heatpump-oauth-server.go"],
-    importpath = "github.com/gonzojive/heatpump/cloud/google/server/cmd/heatpump-oauth-server",
+    base = "@distroless_base",
+    entrypoint = ["/http-endpoint"],
+    tars = ["image_layer"],
 )
 
-container_push(
-    name = "push_image",
-    format = "Docker",
-    image = ":image",
-    registry = "us-west4-docker.pkg.dev",
-    repository = "heatpump-dev/project-images/http-endpoint",
-    tag = "main",
-)
+# container_push(
+#     name = "push_image",
+#     format = "Docker",
+#     image = ":image",
+#     registry = "us-west4-docker.pkg.dev",
+#     repository = "heatpump-dev/project-images/http-endpoint",
+#     tag = "main",
+# )
 
 go_library(
     name = "http-endpoint_lib",
@@ -30,7 +35,7 @@ go_library(
         "//proto/controller",
         "//util/grpcserverutil",
         "@com_github_golang_glog//:glog",
-        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//:grpc",
     ],
 )
 
