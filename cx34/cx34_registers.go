@@ -159,12 +159,12 @@ func (s *State) COP() (units.CoefficientOfPerformance, bool) {
 	return baseCOP, true
 }
 
-// DeltaT returns the outlet temperature minust he inlet temperature
+// DeltaT returns the outlet temperature minus the inlet temperature.
 func (s *State) DeltaT() units.Temperature {
 	return s.ACOutletWaterTemp() - s.ACInletWaterTemp()
 }
 
-// ACMode returns current AirConditioningMode
+// ACMode returns the current AirConditioningMode.
 func (s *State) ACMode() AirConditioningMode {
 	raw := s.registerValues[ACMode]
 	mode, err := parseAirConditioningMode(raw)
