@@ -61,7 +61,7 @@ Vesion	1.0			update:
 | 46801   | B6D1 | 04            | Room temperature                         |                                                                                                                       | TEMP1  |
 | 46802   | B6D2 | 04            | Coil temperature                         |                                                                                                                       | TEMP1  |
 | 46803   | B6D3 | 04            | Current fan speed                        | 0 Off；1 Ultra-low speed； 2 Low speed；3 Medium speed；4 High speed；5 Top speed；6 Auto                                   | DIGI1  |
-| 46804   | B6D4 | 04            | Fan revolution                           | 0～2000 （rpm）                                                                                                          | TEMP1  |
+| 46804   | B6D4 | 04            | Fan revolution                           | 0～2000 （rpm）                                                                                                          | DIGI1  |
 | 46805   | B6D5 | 04            | Electromagnetic Valve                    | 0 Off； 1 On                                                                                                           | DIGI1  |
 | 46806   | B6D6 | 04            | Remote on/off                            | 0 Open;1 close                                                                                                        | DIGI1  |
 | 46807   | B6D7 | 04            | Simulation signal                        | 0 (The main engine needs to be switched to non-heating mode)；1 (The main engine needs to be switched to heating mode) | DIGI1  |
