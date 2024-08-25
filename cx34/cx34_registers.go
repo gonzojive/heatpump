@@ -200,17 +200,35 @@ func parseAirConditioningMode(val uint16) (AirConditioningMode, error) {
 	if _, ok := validACModes[asEnum]; ok {
 		return asEnum, nil
 	}
-	return asEnum, fmt.Errorf("invalid ACMode value %d")
+	return asEnum, fmt.Errorf("invalid AirConditioningMode value, %d", val)
 }
 
 // IsCooling reports if the mode is cooling or cooling+domestic hot water.
 func (m AirConditioningMode) IsCooling() bool {
-	return m == AirConditioningModeCooling
+	return m == AirConditioningModeCooling || m == AirConditioningModeCoolingAndDHW
 }
 
 // IsHeating reports if the mode is heating or heating+domestic hot water.
 func (m AirConditioningMode) IsHeating() bool {
-	return m == AirConditioningModeHeating
+	return m == AirConditioningModeHeating || m == AirConditioningModeHeatingAndDHW
+}
+
+// String returns the string representation of the AirConditioningMode.
+func (m AirConditioningMode) String() string {
+	switch m {
+	case AirConditioningModeCooling:
+		return "Cooling"
+	case AirConditioningModeHeating:
+		return "Heating"
+	case AirConditioningModeDHW:
+		return "Domestic Hot Water"
+	case AirConditioningModeCoolingAndDHW:
+		return "Cooling + Domestic Hot Water"
+	case AirConditioningModeHeatingAndDHW:
+		return "Heating + Domestic Hot Water"
+	default:
+		return fmt.Sprintf("Unknown AirConditioningMode (%d)", m)
+	}
 }
 
 /*
