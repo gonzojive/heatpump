@@ -159,12 +159,12 @@ func (s *State) COP() (units.CoefficientOfPerformance, bool) {
 	return baseCOP, true
 }
 
-// DeltaT returns the outlet temperature minust he inlet temperature
+// DeltaT returns the outlet temperature minus the inlet temperature.
 func (s *State) DeltaT() units.Temperature {
 	return s.ACOutletWaterTemp() - s.ACInletWaterTemp()
 }
 
-// ACMode returns the outlet temperature minust he inlet temperature
+// ACMode returns the current AirConditioningMode.
 func (s *State) ACMode() AirConditioningMode {
 	raw := s.registerValues[ACMode]
 	mode, err := parseAirConditioningMode(raw)
@@ -175,19 +175,29 @@ func (s *State) ACMode() AirConditioningMode {
 }
 
 // AirConditioningMode specifies whether the heat pump is configured to heat,
-// cool, heat+domestic hot water, or cool+domestic hot water.
+// cool, domestic hot water, heat+domestic hot water, or cool+domestic hot water.
 type AirConditioningMode uint8
 
 // Valid AirConditioningMode values.
 const (
+	// Cooling only.
 	AirConditioningModeCooling AirConditioningMode = 0
+	// Heating only.
 	AirConditioningModeHeating AirConditioningMode = 1
-	// Heat+DHW, Cool+DHW are options but I'm unsure of the values.
+	// Domestic hot water only.
+	AirConditioningModeDHW AirConditioningMode = 2
+	// Cooling + domestic hot water.
+	AirConditioningModeCoolingAndDHW AirConditioningMode = 3
+	// Heating + domestic hot water.
+	AirConditioningModeHeatingAndDHW AirConditioningMode = 4
 )
 
 var validACModes = map[AirConditioningMode]struct{}{
-	AirConditioningModeCooling: {},
-	AirConditioningModeHeating: {},
+	AirConditioningModeCooling:       {},
+	AirConditioningModeHeating:       {},
+	AirConditioningModeDHW:           {},
+	AirConditioningModeCoolingAndDHW: {},
+	AirConditioningModeHeatingAndDHW: {},
 }
 
 func parseAirConditioningMode(val uint16) (AirConditioningMode, error) {
@@ -195,17 +205,35 @@ func parseAirConditioningMode(val uint16) (AirConditioningMode, error) {
 	if _, ok := validACModes[asEnum]; ok {
 		return asEnum, nil
 	}
-	return asEnum, fmt.Errorf("invalid ACMode value %d")
+	return asEnum, fmt.Errorf("invalid AirConditioningMode value, %d", val)
 }
 
 // IsCooling reports if the mode is cooling or cooling+domestic hot water.
 func (m AirConditioningMode) IsCooling() bool {
-	return m == AirConditioningModeCooling
+	return m == AirConditioningModeCooling || m == AirConditioningModeCoolingAndDHW
 }
 
 // IsHeating reports if the mode is heating or heating+domestic hot water.
 func (m AirConditioningMode) IsHeating() bool {
-	return m == AirConditioningModeHeating
+	return m == AirConditioningModeHeating || m == AirConditioningModeHeatingAndDHW
+}
+
+// String returns the string representation of the AirConditioningMode.
+func (m AirConditioningMode) String() string {
+	switch m {
+	case AirConditioningModeCooling:
+		return "Cooling"
+	case AirConditioningModeHeating:
+		return "Heating"
+	case AirConditioningModeDHW:
+		return "Domestic Hot Water"
+	case AirConditioningModeCoolingAndDHW:
+		return "Cooling + Domestic Hot Water"
+	case AirConditioningModeHeatingAndDHW:
+		return "Heating + Domestic Hot Water"
+	default:
+		return fmt.Sprintf("Unknown AirConditioningMode (%d)", m)
+	}
 }
 
 /*
@@ -251,6 +279,7 @@ Table of registers with values that changed
 
 // Known Register values.
 const (
+	SwitchOnOff                Register = 140 // 0 = off, 1 = on
 	ACMode                     Register = 141 // 0 = cool, 1 = heat
 	TargetACCoolingModeTemp    Register = 142
 	TargetACHeatingModeTemp    Register = 143
@@ -323,6 +352,7 @@ const (
 
 // Source: https://www.chiltrix.com/control-options/Remote-Gateway-BACnet-Guide-rev2.pdf
 var registerNames = map[Register]string{
+	SwitchOnOff:             "SwitchOnOff",
 	ACMode:                  "ACMode",
 	TargetACCoolingModeTemp: "TargetACCoolingModeTemp",
 	TargetACHeatingModeTemp: "TargetACHeatingModeTemp",
