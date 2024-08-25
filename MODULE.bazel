@@ -124,8 +124,8 @@ use_repo(oci, "distroless_base")
 # Needed to resolve https://github.com/grpc/grpc-java/issues/11275.
 bazel_dep(name = "grpc-java", version = "1.64.0")
 
-
 http_jar = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_jar")
+
 http_jar(
     name = "firestore_emulator",
     sha256 = "489617f9c99d2733c884b7d6e58fe2808f5cb87c645edb967417690b8393c13e",

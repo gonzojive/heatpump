@@ -29,11 +29,11 @@ require (
 	github.com/johnsiilver/golib v1.1.2
 	github.com/martinlindhe/unit v0.0.0-20201217003049-aef7d8d7910f
 	github.com/mtraver/iotcore v0.0.0-20210812222124-e6d0c936231c
+	github.com/rmrobinson/google-smart-home-action-go v0.0.0-20221125003243-073d35be9d8b
 	github.com/samber/lo v1.33.0
 	github.com/stretchr/testify v1.9.0
 	github.com/teambition/rrule-go v1.7.3
 	github.com/yuin/goldmark v1.4.13
-	github.com/rmrobinson/google-smart-home-action-go v1.0.2
 	go.uber.org/multierr v1.6.0
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.26.0
