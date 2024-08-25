@@ -180,10 +180,15 @@ type AirConditioningMode uint8
 
 // Valid AirConditioningMode values.
 const (
-	AirConditioningModeCooling       AirConditioningMode = 0
-	AirConditioningModeHeating       AirConditioningMode = 1
-	AirConditioningModeDHW           AirConditioningMode = 2
+	// Cooling only.
+	AirConditioningModeCooling AirConditioningMode = 0
+	// Heating only.
+	AirConditioningModeHeating AirConditioningMode = 1
+	// Domestic hot water only.
+	AirConditioningModeDHW AirConditioningMode = 2
+	// Cooling + domestic hot water.
 	AirConditioningModeCoolingAndDHW AirConditioningMode = 3
+	// Heating + domestic hot water.
 	AirConditioningModeHeatingAndDHW AirConditioningMode = 4
 )
 

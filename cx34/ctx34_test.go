@@ -31,3 +31,34 @@ func TestAirConditioningMode(t *testing.T) {
 		})
 	}
 }
+
+func TestAirConditioningMode_parse(t *testing.T) {
+	testCases := []struct {
+		want          AirConditioningMode
+		registerValue uint16
+		wantErr       bool
+	}{
+		{AirConditioningModeCooling, 0, false},
+		{AirConditioningModeHeating, 1, false},
+		{AirConditioningModeDHW, 2, false},
+		{AirConditioningModeCoolingAndDHW, 3, false},
+		{AirConditioningModeHeatingAndDHW, 4, false},
+		{AirConditioningMode(42), 42, true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.want.String(), func(t *testing.T) {
+			got, err := parseAirConditioningMode(tc.registerValue)
+			if err != nil {
+				if !tc.wantErr {
+					t.Errorf("parseAirConditioningMode(%v) error = %v, wantErr = %v", tc.registerValue, err, tc.wantErr)
+				}
+				return
+			}
+
+			if got != tc.want {
+				t.Errorf("parseAirConditioningMode(%v) = %q, want %q", tc.registerValue, got, tc.want)
+			}
+		})
+	}
+}
