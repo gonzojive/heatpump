@@ -13,7 +13,7 @@ go_library(
         "//proto/fancoil",
         "//util/grpcserverutil",
         "@com_github_golang_glog//:glog",
-        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//:grpc",
         "@org_golang_google_protobuf//encoding/prototext",
         "@org_golang_google_protobuf//proto",
     ],

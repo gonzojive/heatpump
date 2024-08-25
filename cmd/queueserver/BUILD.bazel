@@ -1,6 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
-load("@io_bazel_rules_docker//go:image.bzl", "go_image")
-load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+load("@rules_oci//oci:defs.bzl", "oci_image")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 
 go_library(
     name = "queueserver_lib",
@@ -13,7 +13,7 @@ go_library(
         "//cloud/queue/queueserver",
         "//proto/command_queue",
         "@com_github_golang_glog//:glog",
-        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//credentials",
         "@org_golang_google_grpc//reflection",
         "@org_golang_x_sync//errgroup",
@@ -26,16 +26,23 @@ go_binary(
     visibility = ["//visibility:public"],
 )
 
-go_image(
-    name = "image",
-    embed = [":queueserver_lib"],
+pkg_tar(
+    name = "image_layer",
+    srcs = [":queueserver"],
 )
 
-container_push(
-    name = "push-image",
-    format = "Docker",
-    image = ":image",
-    registry = "us-west4-docker.pkg.dev",
-    repository = "heatpump-dev/project-images/command-queue-service-image",
-    tag = "main",
+oci_image(
+    name = "image",
+    base = "@distroless_base",
+    entrypoint = ["/queueserver"],
+    tars = ["image_layer"],
 )
+
+# container_push(
+#     name = "push-image",
+#     format = "Docker",
+#     image = ":image",
+#     registry = "us-west4-docker.pkg.dev",
+#     repository = "heatpump-dev/project-images/command-queue-service-image",
+#     tag = "main",
+# )
