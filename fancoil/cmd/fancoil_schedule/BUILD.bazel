@@ -10,7 +10,7 @@ go_library(
         "@com_github_golang_glog//:glog",
         "@com_github_martinlindhe_unit//:unit",
         "@com_github_teambition_rrule_go//:rrule-go",
-        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//:grpc",
         "@org_golang_x_sync//errgroup",
     ],
 )

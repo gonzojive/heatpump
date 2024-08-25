@@ -17,7 +17,7 @@ go_library(
         "@com_github_goburrow_modbus//:modbus",
         "@com_github_goburrow_serial//:serial",
         "@com_github_golang_glog//:glog",
-        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//codes",
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//encoding/prototext",

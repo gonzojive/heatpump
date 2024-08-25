@@ -14,7 +14,7 @@ go_library(
         "//proto/controller",
         "//util/must",
         "@com_github_golang_glog//:glog",
-        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_golang_protobuf//proto",
         "@com_github_samber_lo//:lo",
         "@com_google_cloud_go_secretmanager//apiv1",
         "@com_google_cloud_go_secretmanager//apiv1/secretmanagerpb",
