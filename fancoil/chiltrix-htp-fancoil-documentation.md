@@ -36,16 +36,15 @@ Vesion	1.0			update:
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | TEMP1      | Signed byte ，Precision 0.1℃，Formula：T\*10，Temperature range ：\-30~97℃（if temperature is shown as 25°C, data transmission is 250 according to the preceding formula. When bit15=1 , it means minus. when bit15=0, it means integer );When this value is 32767, corresponding sensor is faulty.） |
 | DIGI1      | Unsigned byte, unit is 1. When shows 123, the transmitted data is 123.                                                                                                                                                                                                                         |
+| TIMER1     | Unsigned byte, unit is hours. Setting a value 1-11 starts a timer. Overwriting a timer with the same value does not reset the timer. Overwriting with a different value is not fully untested (quickly writing one value and then back to the original value does not seem to reset the timer, but it's possible delaying between writes would trigger a reset if an event loop needs to pick up the change). |
 
 | Address | HEX  | Function Code | Content                                  | Description                                                                                                           | Remark |
 | ------- | ---- | ------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------ |
 | 28301   | 6E8D | 03/10         | On/Off                                   | 0=off,1=on                                                                                                            | DIGI1  |
 | 28302   | 6E8E | 03/10         | Mode                                     | 0～auto；1～cooling;2～dehumidification；3～ventilate；4～heating；                                                            | DIGI1  |
 | 28303   | 6E8F | 03/10         | Fanspeed                                 | 2～low speed；3～medium speed； 4～high speed；<br>6～aotu                                                                   | DIGI1  |
-| 28306   | 6E92 | 03/10         | Timer off                                | 1-11=set a timer in hours after which to turn unit off.                           
-                                       | DIGI1  |
-| 28307   | 6E93 | 03/10         | Timer on                                | 1-11=set a timer in hours after which to turn unit on.                            
-                                       | DIGI1  |
+| 28306   | 6E92 | 03/10         | Timer off                                | Timer after which to turn the unit off.                                           | TIMER1  |
+| 28307   | 6E93 | 03/10         | Timer on                                 | Timer after which to turn unit on.                                               | TIMER1  |
 | 28308   | 6E94 | 03/10         | Max. set temperature                     | （\-9～96）℃                                                                                                             | DIGI1  |
 | 28309   | 6E95 | 03/10         | Min. set temperature                     | （\-9～96）℃                                                                                                             | DIGI1  |
 | 28310   | 6E96 | 03/10         | Cooling set temperature                  |                                                                                                                       | TEMP1  |
