@@ -1,4 +1,4 @@
-## Chiltrix CX34 dashboard software
+# Chiltrix CX34 dashboard software
 
 This project is used to communicate with a hydronic heating system that uses the
 [Chiltrix CX34](https://www.chiltrix.com/small-chiller-home.html) air-to-water
@@ -63,6 +63,15 @@ Inspect the logs with
 ```shell
 journalctl -u cx34collector.service
 ```
+
+#### Developer notes
+
+`./tools/install-waterpi.sh` is an example script that will build and copy
+binaries to a remote Raspberry pi.
+
+`grpcui -plaintext 192.168.86.24:8084` will run a local
+[`grpcui`](https://github.com/fullstorydev/grpcui) frontend for querying the
+heatpump after `grpcui` is installed.
 
 ### CX34 control
 
@@ -153,4 +162,3 @@ changes significantly:
 
 https://console.actions.google.com/u/0/project/hydronics-9f50d/actions/smarthome/
 https://console.actions.google.com/u/0/project/hydronics-9f50d/smarthomeaccountlinking/
-
