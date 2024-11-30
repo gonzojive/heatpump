@@ -1,4 +1,5 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@pkg_with_runfiles//:defs.bzl", "pkg_with_runfiles")
 
 go_library(
     name = "cx34install_lib",
@@ -15,4 +16,10 @@ go_binary(
     name = "cx34install",
     embed = [":cx34install_lib"],
     visibility = ["//visibility:public"],
+)
+
+pkg_with_runfiles(
+    name = "cx34control_release",
+    binary = "//cmd/cx34control:cx34control_pi",
+    binary_path_in_archive = "cx34control",
 )
