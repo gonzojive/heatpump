@@ -38,13 +38,11 @@ bazel_dep(
     version = "1.8.0",
 )
 bazel_dep(name = "rules_pkg", version = "0.9.1")
-
 bazel_dep(name = "pkg_with_runfiles", version = "0.1")
-
 git_override(
     module_name = "pkg_with_runfiles",
-    remote = "https://github.com/gonzojive/pkg-with-runfiles",
     commit = "112f18f93f9bb3b51d192243c045c537bea98ab9",
+    remote = "https://github.com/gonzojive/pkg-with-runfiles",
 )
 
 go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
