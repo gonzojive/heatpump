@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "cx34.go",
         "cx34_diffs.go",
+        "cx34_readwriteservice.go",
         "cx34_registers.go",
     ],
     importpath = "github.com/gonzojive/heatpump/cx34",
