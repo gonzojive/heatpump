@@ -70,7 +70,7 @@ func run(ctx context.Context) error {
 						glog.Errorf("error getting CX34 state: %v", err)
 						continue
 					}
-					glog.Infof("State of CX34 heat pump: %s", state)
+					glog.Infof("State of CX34 heat pump: %s", state.Report(false, nil))
 				}
 			}
 		})

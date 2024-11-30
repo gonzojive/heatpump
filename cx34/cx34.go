@@ -20,6 +20,7 @@ import (
 	"go.uber.org/multierr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -62,9 +63,13 @@ type Params struct {
 
 // Client is used to communicate with the Chiltrix CX34 heat pump.
 type Client struct {
-	chiltrix.ReadWriteServiceServer
+	chiltrix.UnimplementedReadWriteServiceServer
 	c modbus.Client
 }
+
+var (
+	_ chiltrix.ReadWriteServiceServer = (*Client)(nil)
+)
 
 // Connect connects a new client to the heat pump or returns an error.
 func Connect(p *Params) (*Client, error) {
@@ -113,6 +118,14 @@ func Connect(p *Params) (*Client, error) {
 		return nil, err
 	}
 	return c, nil
+}
+
+func (c *Client) GetState(ctx context.Context, _ *chiltrix.GetStateRequest) (*chiltrix.State, error) {
+	state, err := c.ReadState()
+	if err != nil {
+		status.Errorf(codes.Internal, "error reading state of Chiltrix heat pump: %v", err)
+	}
+	return state.Proto(), nil
 }
 
 // ReadState returns a snapshot of the state of the heat pump.
