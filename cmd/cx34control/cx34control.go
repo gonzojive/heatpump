@@ -82,7 +82,7 @@ func run(ctx context.Context) error {
 			return fmt.Errorf("failed to listen: %w", err)
 		}
 		s := grpc.NewServer()
-		chiltrix.RegisterReadWriteServiceServer(s, cxClient)
+		chiltrix.RegisterReadWriteServiceServer(s, cxClient.ReadWriteServiceServer())
 		reflection.Register(s)
 		glog.Infof("cx34control server listening on :%d", *grpcPort)
 		if err := s.Serve(lis); err != nil {

@@ -18,7 +18,6 @@ import (
 	"github.com/gonzojive/heatpump/units"
 	"github.com/howeyc/crc16"
 	"go.uber.org/multierr"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -63,13 +62,8 @@ type Params struct {
 
 // Client is used to communicate with the Chiltrix CX34 heat pump.
 type Client struct {
-	chiltrix.UnimplementedReadWriteServiceServer
 	c modbus.Client
 }
-
-var (
-	_ chiltrix.ReadWriteServiceServer = (*Client)(nil)
-)
 
 // Connect connects a new client to the heat pump or returns an error.
 func Connect(p *Params) (*Client, error) {
@@ -120,14 +114,6 @@ func Connect(p *Params) (*Client, error) {
 	return c, nil
 }
 
-func (c *Client) GetState(ctx context.Context, _ *chiltrix.GetStateRequest) (*chiltrix.State, error) {
-	state, err := c.ReadState()
-	if err != nil {
-		status.Errorf(codes.Internal, "error reading state of Chiltrix heat pump: %v", err)
-	}
-	return state.Proto(), nil
-}
-
 // ReadState returns a snapshot of the state of the heat pump.
 func (c *Client) ReadState() (*State, error) {
 	// ReadCoils, ReadInputRegisters, and ReadDiscreteInputs are not supported.
@@ -156,22 +142,28 @@ func (c *Client) ReadState() (*State, error) {
 	return &State{time.Now(), m}, nil
 }
 
+// Return an implementation of [chiltrix.ReadWriteServiceServer] backed by this
+// [Client].
+func (c *Client) ReadWriteServiceServer() *ReadWriteServiceServer {
+	return &ReadWriteServiceServer{client: c}
+}
+
 // SetParameter sets the target heating temperature for the CX34.
 func (c *Client) SetParameter(ctx context.Context, req *chiltrix.SetParameterRequest) (*chiltrix.SetParameterResponse, error) {
 	if req.GetTargetHeatingModeTemperature() != nil {
 		if err := c.setHeatingTemp(units.FromCelsius(req.GetTargetHeatingModeTemperature().GetDegreesCelcius())); err != nil {
-			return nil, grpc.Errorf(codes.Internal, "error setting temperature: %v", err)
+			return nil, status.Errorf(codes.Internal, "error setting temperature: %v", err)
 		}
 	}
 	if req.GetRegisterValue() != nil {
 		if v := req.GetRegisterValue().GetRegister(); v > math.MaxUint16 {
-			return nil, grpc.Errorf(codes.InvalidArgument, "invalid register %d is out of range", v)
+			return nil, status.Errorf(codes.InvalidArgument, "invalid register %d is out of range", v)
 		}
 		if v := req.GetRegisterValue().GetValue(); v > math.MaxUint16 {
-			return nil, grpc.Errorf(codes.InvalidArgument, "invalid register value %d is out of range", v)
+			return nil, status.Errorf(codes.InvalidArgument, "invalid register value %d is out of range", v)
 		}
 		if err := c.setRegisterValue(uint16(req.RegisterValue.GetRegister()), uint16(req.RegisterValue.GetValue())); err != nil {
-			return nil, grpc.Errorf(codes.Internal, "error setting register: %v", err)
+			return nil, status.Errorf(codes.Internal, "error setting register: %v", err)
 		}
 	}
 	return &chiltrix.SetParameterResponse{}, nil
