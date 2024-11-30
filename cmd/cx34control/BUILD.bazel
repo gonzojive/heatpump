@@ -12,6 +12,7 @@ go_library(
         "@com_github_yuin_goldmark//:goldmark",
         "@com_github_yuin_goldmark//extension",
         "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//reflection",
         "@org_golang_x_sync//errgroup",
     ],
 )
@@ -19,5 +20,14 @@ go_library(
 go_binary(
     name = "cx34control",
     embed = [":cx34control_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_binary(
+    name = "cx34control_pi",
+    #goarch = "arm64",
+    embed = [":cx34control_lib"],
+    goarch = "arm",
+    goos = "linux",
     visibility = ["//visibility:public"],
 )
