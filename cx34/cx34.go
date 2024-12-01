@@ -280,6 +280,7 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 	return fmt.Sprintf(`## Summary of heatpump state
 
 * AC Mode: %s
+* Ambient Temp: %s
 * AC Target Temp: %s
 * Water Inlet Temp: %s
 * Water Outlet Temp: %s
@@ -287,11 +288,13 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 * Electric power: %.1f A * %.01f V = %.01f W
 * Useful heat rate: %.1f W
 * COP: %s
+* Fault code: %s
 
 ## Register value snapshot
 
 %s`,
 		s.ACMode(),
+		formatTemp(s.AmbientTemp()),
 		formatTemp(s.ACTargetTemp()),
 		formatTemp(s.ACInletWaterTemp()),
 		formatTemp(s.ACOutletWaterTemp()),
@@ -304,6 +307,14 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 				return "n/a due to low electric power draw"
 			}
 			return fmt.Sprintf("%.01f", cop)
+		}(),
+		func() string {
+			value, ok := s.RegisterValues()[CurrentFaultCode]
+			valueStr := "n/a"
+			if ok {
+				valueStr = fmt.Sprintf("%d", value)
+			}
+			return fmt.Sprintf("%s (32 may indicate P5 error code)", valueStr)
 		}(),
 
 		registerValueSnapshot)
