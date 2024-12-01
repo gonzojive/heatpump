@@ -77,7 +77,7 @@ message StateDiff {
 }
 
 message SetParameterRequest {
-    // If specifies, updates the target heating mode temperature.
+    // If specified, updates the target heating mode temperature.
     Temperature target_heating_mode_temperature = 1;
 
     // Any other register.

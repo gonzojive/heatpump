@@ -17,6 +17,7 @@ import (
 	"github.com/gonzojive/heatpump/proto/chiltrix"
 	"github.com/gonzojive/heatpump/units"
 	"github.com/howeyc/crc16"
+	"github.com/martinlindhe/unit"
 	"go.uber.org/multierr"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -257,12 +258,64 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].reg < entries[j].reg
 	})
-	b := &mdtable.Builder{}
-	b.SetHeader([]string{"Register no.", "Register name", "Value"})
-	for _, e := range entries {
-		b.AddRow([]string{fmt.Sprintf("%d", e.reg), e.reg.String(), fmt.Sprintf("%d", e.value)})
-	}
-	return b.Build()
+
+	registerValueSnapshot := func() string {
+		b := &mdtable.Builder{}
+		b.SetAlignment([]mdtable.Alignment{mdtable.Left, mdtable.Left, mdtable.Left})
+		b.SetHeader([]string{"Register no.", "Register name", "Value"})
+		for _, e := range entries {
+			b.AddRow([]string{fmt.Sprintf("%d", e.reg), e.reg.String(), fmt.Sprintf("%d", e.value)})
+		}
+		return b.Build()
+	}()
+
+	return fmt.Sprintf(`## Summary of heatpump state
+
+* AC Mode: %s
+* Ambient Temp: %s
+* AC Target Temp: %s
+* Water Inlet Temp: %s
+* Water Outlet Temp: %s
+* Water flow rate: %.1f L/m
+* Electric power: %.1f A * %.01f V = %.01f W
+* Useful heat rate: %.1f W
+* COP: %s
+* Fault code: %s
+
+## Register value snapshot
+
+%s`,
+		s.ACMode(),
+		formatTemp(s.AmbientTemp()),
+		formatTemp(s.ACTargetTemp()),
+		formatTemp(s.ACInletWaterTemp()),
+		formatTemp(s.ACOutletWaterTemp()),
+		s.FlowRate().LitersPerMinute(),
+		s.ACCurrent().Amperes(), s.ACVoltage().Volts(), s.ApparentPower().Watts(),
+		s.UsefulHeatRate().Watts(),
+		func() string {
+			cop, ok := s.COP()
+			if !ok {
+				return "n/a due to low electric power draw"
+			}
+			return fmt.Sprintf("%.01f", cop)
+		}(),
+		func() string {
+			value, ok := s.RegisterValues()[CurrentFaultCode]
+			valueStr := "n/a"
+			if ok {
+				valueStr = fmt.Sprintf("%d", value)
+			}
+			return fmt.Sprintf("%s (32 may indicate P5 error code)", valueStr)
+		}(),
+
+		registerValueSnapshot)
+
+	return registerValueSnapshot
+}
+
+func formatTemp(temp unit.Temperature) string {
+	return fmt.Sprintf("%.1f°C (%.1f°F)", temp.Celsius(), temp.Fahrenheit())
 }
 
 // String returns a human readable summary of the state of the heat pump.
