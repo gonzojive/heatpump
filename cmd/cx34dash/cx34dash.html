@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 1  with Mermaid</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "marked": "https://cdn.jsdelivr.net/npm/marked@15.0.3/lib/marked.esm.js",
+          "mermaid": "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.mjs"
+        },
+        "integrity": {
+          "https://cdn.jsdelivr.net/npm/marked@15.0.3/lib/marked.esm.js": "sha256-kI65WpRBp9WO/+KQqq2uKcuZBWYcj+Qn0ieG/fC2QCc=",
+          "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.mjs": "sha256-kjmqUCcbkVuApFyPoHSP3p/KRUh/OmzBw5E4HgkSMmg="
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="content"></div>
+
+    <script type="module">
+        import * as marked from 'marked';
+        import * as mermaid from 'mermaid';
+
+        // Initialize Mermaid 
+        //mermaid.initialize({ startOnLoad: true }); 
+
+        async function loadMarkdown() {
+          try {
+            const response = await fetch('./index.md');
+            const markdown = await response.text();
+
+            marked.use({
+              code: function (code) {
+                if (code.lang == 'mermaid') {
+                  return `<pre class="mermaid">${code.text}</pre>`;
+                }
+                return `<pre>${code.text}</pre>`;
+              },
+            });
+            const html = marked.parse(markdown);
+            document.getElementById('content').innerHTML = html;
+          } catch (error) {
+            console.error('Error fetching markdown:', error);
+            document.getElementById('content').innerHTML = '<p>Error loading content.</p>';
+          }
+        }
+
+        loadMarkdown();
+    </script>
+</body>
+</html>
