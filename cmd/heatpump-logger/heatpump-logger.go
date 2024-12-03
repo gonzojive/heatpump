@@ -7,16 +7,14 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
-	"strings"
+	"path/filepath"
+	"sync"
+	"time"
 
-	"github.com/bazelbuild/rules_go/go/runfiles"
 	"github.com/golang/glog"
-	"github.com/martinlindhe/unit"
+	"google.golang.org/protobuf/proto"
 
-	"github.com/gonzojive/heatpump/cx34"
-	"github.com/gonzojive/heatpump/dashboard"
-	"github.com/gonzojive/heatpump/fancoil"
+	"github.com/gonzojive/heatpump/cmd/heatpump-logger/loglib"
 	"github.com/gonzojive/heatpump/grpcspec"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
 	"go.uber.org/fx"
@@ -25,9 +23,9 @@ import (
 )
 
 var (
-	httpPort         = flag.Int("status-http-port", 8081, "HTTP server port for reporting the logger's status.")
-	historianAddr    = flag.String("collector", ":8082", "Address of the cx34collector gRPC service. May be on a remote machine.")
-	dashboardVersion = flag.String("version", "2", "Dashboard application version to launch. Must be '1' or '2'.")
+	httpPort           = flag.Int("status-http-port", 8081, "HTTP server port for reporting the logger's status.")
+	dataDir            = flag.String("data-dir", "", "Directory where .")
+	newLogFileInterval = flag.Duration("log-file-interval", time.Hour, "Maximum amount of time between initial log file creation and its finalization.")
 
 	readWriteServiceParams = grpcspec.ClientParamsFlag{
 		Value: grpcspec.NewClientParamsBuilder().
@@ -51,23 +49,13 @@ func init() {
 
 func main() {
 	flag.Parse()
-	switch *dashboardVersion {
-	case "1":
-		glog.Infof("starting up heat pump dashboard at http://localhost:%d", *httpPort)
-		if err := dashboard.Run(context.Background(), *historianAddr, *httpPort); err != nil {
-			glog.Exitf("%v", err)
-		}
-	case "2":
-		fx.New(
-			fx.Provide(NewHTTPServer),
-			fx.Provide(newReadWriteServiceClient),
-			fx.Provide(newFancoilServiceClient),
-			fx.Invoke(func(*http.Server) {}),
-		).Run()
-	default:
-		glog.Exitf("Invalid version %q", *dashboardVersion)
-	}
-
+	fx.New(
+		fx.Provide(newHTTPServer),
+		fx.Provide(newReadWriteServiceClient),
+		fx.Provide(newFancoilServiceClient),
+		fx.Provide(newLoggingService),
+		fx.Invoke(func(*http.Server) {}),
+	).Run()
 }
 
 func newReadWriteServiceClient(lc fx.Lifecycle) (chiltrix.ReadWriteServiceClient, error) {
@@ -98,42 +86,82 @@ func newFancoilServiceClient(lc fx.Lifecycle) (fancoilpb.FanCoilServiceClient, e
 	return client, nil
 }
 
-func NewHTTPServer(lc fx.Lifecycle, rwServiceClient chiltrix.ReadWriteServiceClient, fancoilClient fancoilpb.FanCoilServiceClient) *http.Server {
+type LoggingService struct {
+	logWriter *loglib.MultiFileTFRecordWriter
+}
+
+func periodicallyLogHeatpumpState(
+	ctx context.Context,
+	interval time.Duration,
+	done <-chan struct{},
+	logger *LoggingService,
+	heatpumpClient chiltrix.ReadWriteServiceClient,
+) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			state, err := heatpumpClient.GetState(ctx, &chiltrix.GetStateRequest{})
+			if err != nil {
+				glog.Errorf("error getting heatpump state: %v", err)
+			}
+			registerSnapshotBytes, err := proto.Marshal(state.GetRegisterValues())
+			if err != nil {
+				glog.Errorf("error encoding RegisterValues proto: %v", err)
+			}
+			if err := logger.logWriter.Write(registerSnapshotBytes); err != nil {
+				glog.Errorf("error writing RegisterValues proto: %v", err)
+			}
+		case <-done:
+			return
+		}
+	}
+}
+
+func newLoggingService(lc fx.Lifecycle, heatpumpClient chiltrix.ReadWriteServiceClient) *LoggingService {
+	service := &LoggingService{}
+	doneCh := make(chan struct{})
+	wg := &sync.WaitGroup{}
+	var loggerCtx context.Context
+	var cancelLoggerCtx context.CancelFunc
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			if *dataDir == "" {
+				return fmt.Errorf("invalid --data-dir argument (blank)")
+			}
+			loggerCtx, cancelLoggerCtx = context.WithCancel(context.Background())
+			service.logWriter = loglib.NewPeriodicMultiFileTFRecordWriter(
+				loggerCtx,
+				time.Now,
+				filepath.Join(*dataDir, "cx34-RegisterSnapshot"),
+				".tfrecord",
+				*newLogFileInterval,
+			)
+
+			go func() {
+				wg.Add(1)
+				defer wg.Done()
+				periodicallyLogHeatpumpState(loggerCtx, time.Second*10, doneCh, service, heatpumpClient)
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			cancelLoggerCtx()
+			wg.Wait()
+			return service.logWriter.Close()
+		},
+	})
+	return service
+}
+
+func newHTTPServer(lc fx.Lifecycle, loggingService *LoggingService) *http.Server {
 	mux := http.NewServeMux()
 	// Add your handler for /index.md here
 	mux.HandleFunc("/index.md", func(w http.ResponseWriter, r *http.Request) {
-		markdown, err := generateMarkdown(r.Context(), rwServiceClient, fancoilClient)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to generate markdown: %v", err), http.StatusInternalServerError)
-			return
-		}
+		markdown := ""
 		w.Header().Set("Content-Type", "text/markdown")
 		fmt.Fprint(w, markdown)
-	})
-	mux.HandleFunc("/index.html", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-
-		// Get the runfiles manifest
-		rfs, err := runfiles.New()
-		if err != nil {
-			http.Error(w, "Failed to get runfiles", http.StatusInternalServerError)
-			return
-		}
-
-		// Load the runfile using the manifest
-		indexHTMLPath, err := rfs.Rlocation("github-gonzojive-heatpump/cmd/cx34dash/cx34dash.html")
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to load cx34dash.html: %v", err), http.StatusInternalServerError)
-			return
-		}
-		indexHTML, err := os.ReadFile(indexHTMLPath)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to load cx34dash.html: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		// Output the content
-		w.Write(indexHTML)
 	})
 
 	srv := &http.Server{
@@ -155,84 +183,4 @@ func NewHTTPServer(lc fx.Lifecycle, rwServiceClient chiltrix.ReadWriteServiceCli
 		},
 	})
 	return srv
-}
-
-func generateMarkdown(
-	ctx context.Context,
-	rwServiceClient chiltrix.ReadWriteServiceClient,
-	fancoilClient fancoilpb.FanCoilServiceClient) (string, error) {
-	resp, err := rwServiceClient.GetState(ctx, &chiltrix.GetStateRequest{})
-	if err != nil {
-		return "", fmt.Errorf("error getting state from heat pump: %w", err)
-	}
-	state, err := cx34.StateFromProto(resp)
-	if err != nil {
-		return "", fmt.Errorf("error parsing state from heat pump: %w", err)
-	}
-	fancoilReportMarkdown, err := fancoilsReport(ctx, fancoilClient)
-	if err != nil {
-		return "", fmt.Errorf("error parsing state from fancoil service: %w", err)
-	}
-	return fmt.Sprintf(`# HVAC System Dashboard
-
-## Fan coil state
-
-%s
-
-%s`, fancoilReportMarkdown, state.Report(false, nil)), nil
-}
-
-func fancoilsReport(
-	ctx context.Context,
-	fancoilClient fancoilpb.FanCoilServiceClient) (string, error) {
-
-	var states []*fancoil.State
-	var reports []string
-
-	{
-		resp, err := fancoilClient.GetState(ctx, &fancoilpb.GetStateRequest{})
-
-		if err != nil {
-			return "", fmt.Errorf("error getting state from fancoils: %w", err)
-		}
-		state, err := fancoil.StateFromSnapshotProto(resp.State.SnapshotTime.AsTime(), resp.GetRawSnapshot())
-		if err != nil {
-			return "", fmt.Errorf("error parsing state from fancoils: %w", err)
-		}
-		states = append(states, state)
-	}
-
-	for _, state := range states {
-		reports = append(reports, fancoilReport(state))
-	}
-
-	return strings.Join(reports, "\n\n"), nil
-}
-
-func fancoilReport(state *fancoil.State) string {
-	stateProto := state.ResponseProto()
-	return fmt.Sprintf(
-		`- Power status: %s
-- Fan setting: %s (preference) %s (current)
-- Fan speed: %d RPM
-- Heating/cooling target temp: %s / %s
-- Room temp: %s
-- Hydronic coil temperature: %s`,
-		stateProto.GetState().GetPowerStatus(),
-		stateProto.GetState().GetPreferenceFanSetting(),
-		stateProto.GetState().GetCurrentFanSetting(),
-		stateProto.GetState().GetFanSpeed().GetRpm(),
-		formatTemp(parseTempProto(stateProto.GetState().GetHeatingTargetTemperature())),
-		formatTemp(parseTempProto(stateProto.GetState().GetCoolingTargetTemperature())),
-		formatTemp(parseTempProto(stateProto.GetState().GetRoomTemperature())),
-		formatTemp(parseTempProto(stateProto.GetState().GetCoilTemperature())),
-	)
-}
-
-func formatTemp(temp unit.Temperature) string {
-	return fmt.Sprintf("%.1f°C (%.1f°F)", temp.Celsius(), temp.Fahrenheit())
-}
-
-func parseTempProto(temp *fancoilpb.Temperature) unit.Temperature {
-	return unit.FromCelsius(float64(temp.GetDegreesCelcius()))
 }

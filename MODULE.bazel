@@ -149,3 +149,5 @@ http_jar(
         "https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.15.1.jar",
     ],
 )
+
+bazel_dep(name = "aspect_bazel_lib", version = "2.9.4")

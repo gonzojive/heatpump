@@ -68,9 +68,9 @@ type MultiFileTFRecordWriter struct {
 //
 // When the function is called and no error is returned, the caller must call
 // Close() on the returned writer.
-func TimestampedNewFileCreator(ctx context.Context, prefix string, now func() time.Time) func() (string, io.WriteCloser, error) {
+func TimestampedNewFileCreator(ctx context.Context, prefix, suffix string, now func() time.Time) func() (string, io.WriteCloser, error) {
 	return func() (string, io.WriteCloser, error) {
-		name := fmt.Sprintf("%s-%s.txt", prefix, now().Format("20060102-1504"))
+		name := fmt.Sprintf("%s.%s%s", prefix, now().Format("20060102-1504"), suffix)
 		f, err := os.Create(name)
 		if err != nil {
 			return "", nil, fmt.Errorf("failed to create file: %w", err)
@@ -150,12 +150,12 @@ func (w *MultiFileTFRecordWriter) Close() error {
 func NewPeriodicMultiFileTFRecordWriter(
 	ctx context.Context,
 	now func() time.Time,
-	filePrefix string,
+	filePrefix, fileSuffix string,
 	singleFileInterval time.Duration,
 ) *MultiFileTFRecordWriter {
 	mostRecentFileCreateTime := now()
 	var mostRecentFile io.WriteCloser
-	createFile := TimestampedNewFileCreator(ctx, filePrefix, now)
+	createFile := TimestampedNewFileCreator(ctx, filePrefix, fileSuffix, now)
 
 	return NewMultiFileTFRecordWriter(
 		func() (string, io.Writer, error) {

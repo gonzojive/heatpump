@@ -1,6 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//bazel:write_go_generated_source_files.bzl", "write_go_generated_source_files")
 
 proto_library(
     name = "chiltrix_proto",
@@ -22,4 +23,12 @@ go_library(
     embed = [":chiltrix_go_proto"],
     importpath = "github.com/gonzojive/heatpump/proto/chiltrix",
     visibility = ["//visibility:public"],
+)
+
+write_go_generated_source_files(
+    name = "write_generated_go_files",
+    src = ":chiltrix_go_proto",
+    output_files = [
+        "chiltrix.pb.go",
+    ],
 )
