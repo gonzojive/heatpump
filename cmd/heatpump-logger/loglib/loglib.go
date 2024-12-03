@@ -51,6 +51,7 @@ type MultiFileTFRecordWriter struct {
 	lock               sync.Mutex
 	writerName         string
 	singleFileWriter   *SingleFileTFRecordWriter
+	closed             bool
 	shouldFinalizeFile func(name string, recordCount, byteCount int) bool
 	finalizeFile       func(name string, writer io.Writer) error
 	newWriter          func() (string, io.Writer, error)
@@ -96,6 +97,9 @@ func NewMultiFileTFRecordWriter(
 func (w *MultiFileTFRecordWriter) Write(record []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
+	if w.closed {
+		return fmt.Errorf("invalid operation: attempted to write to closed writer")
+	}
 	if w.singleFileWriter == nil {
 		name, ioWriter, err := w.newWriter()
 		if err != nil {
@@ -118,6 +122,23 @@ func (w *MultiFileTFRecordWriter) Write(record []byte) error {
 	return nil
 }
 
+// Close finalizes the active active file and disables further writing.
+func (w *MultiFileTFRecordWriter) Close() error {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+	w.closed = true
+
+	if w.singleFileWriter == nil {
+		return nil
+	}
+	if err := w.finalizeFile(w.writerName, w.singleFileWriter.ioWriter); err != nil {
+		return fmt.Errorf("error finalizing file %q: %w", w.writerName, err)
+	}
+	w.writerName = ""
+	w.singleFileWriter = nil
+	return nil
+}
+
 // NewPeriodicMultiFileTFRecordWriter returns a [MultiFileTFRecordWriter] that creates a new file
 // periodically, based on the specified singleFileInterval.
 //
@@ -128,8 +149,8 @@ func (w *MultiFileTFRecordWriter) Write(record []byte) error {
 // The now parameter allows for injecting a custom time source for testing or other purposes.
 func NewPeriodicMultiFileTFRecordWriter(
 	ctx context.Context,
-	filePrefix string,
 	now func() time.Time,
+	filePrefix string,
 	singleFileInterval time.Duration,
 ) *MultiFileTFRecordWriter {
 	mostRecentFileCreateTime := now()

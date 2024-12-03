@@ -2,6 +2,8 @@ package loglib
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -36,4 +38,72 @@ func TestSingleFileTFRecordWriter(t *testing.T) {
 	if diff := cmp.Diff(records, recordStrings); diff != "" {
 		t.Errorf("unxpected diff reading back records (-want, +got):\n%s", diff)
 	}
+}
+
+func TestNewMultiFileTFRecordWriter(t *testing.T) {
+	for _, tc := range []struct {
+		name               string
+		records            []string
+		shouldFinalizeFile func(name string, recordCount, byteCount int) bool
+		wantRecordFiles    map[string][]string
+	}{
+		{
+			records: []string{"a", "b", "c", "d", "e"},
+			shouldFinalizeFile: func(name string, recordCount, byteCount int) bool {
+				return recordCount == 2
+			},
+			wantRecordFiles: map[string][]string{
+				"1": {"a", "b"},
+				"2": {"c", "d"},
+				"3": {"e"},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fileNum := 0
+			files := map[string]*bytes.Buffer{}
+			finalizedFiles := map[string][]byte{}
+			mfWriter := NewMultiFileTFRecordWriter(
+				func() (string, io.Writer, error) {
+					buf := &bytes.Buffer{}
+					fileNum++
+					fileName := fmt.Sprintf("%d", fileNum)
+					files[fileName] = buf
+					return fileName, buf, nil
+				},
+				tc.shouldFinalizeFile,
+				func(name string, writer io.Writer) error {
+					finalizedFiles[name] = files[name].Bytes()
+					return nil
+				},
+			)
+			for _, rec := range tc.records {
+				if err := mfWriter.Write([]byte(rec)); err != nil {
+					t.Fatalf("error writing record")
+				}
+			}
+			if err := mfWriter.Close(); err != nil {
+				t.Fatalf("error closing writer: %v", err)
+			}
+			gotRecordFiles := map[string][]string{}
+			for fileName, fileContents := range finalizedFiles {
+				gotRecordFiles[fileName] = mustReadAllRecords(t, bytes.NewReader(fileContents))
+			}
+			if diff := cmp.Diff(tc.wantRecordFiles, gotRecordFiles); diff != "" {
+				t.Errorf("unxpected diff reading back records (-want, +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func mustReadAllRecords(t *testing.T, reader io.Reader) []string {
+	recordSeq := ReadAllRecords(reader)
+	var recordStrings []string
+	for rec := range recordSeq {
+		if rec.Error != nil {
+			t.Fatalf("error reading records: %v", rec.Error)
+		}
+		recordStrings = append(recordStrings, string(rec.Record))
+	}
+	return recordStrings
 }
