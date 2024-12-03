@@ -21,7 +21,6 @@ go_library(
         "@com_github_howeyc_crc16//:crc16",
         "@com_github_inhies_go_bytesize//:go-bytesize",
         "@com_github_martinlindhe_unit//:unit",
-        "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//codes",
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//types/known/timestamppb",
