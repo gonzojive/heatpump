@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -106,4 +107,34 @@ func mustReadAllRecords(t *testing.T, reader io.Reader) []string {
 		recordStrings = append(recordStrings, string(rec.Record))
 	}
 	return recordStrings
+}
+
+func TestMultiFileTFRecordWriter_WriteAfterClose(t *testing.T) {
+	writer := NewMultiFileTFRecordWriter(
+		func() (string, io.Writer, error) {
+			return "test-file", &bytes.Buffer{}, nil
+		},
+		func(name string, recordCount, byteCount int) bool {
+			return false
+		},
+		func(name string, writer io.Writer) error {
+			return nil
+		},
+	)
+
+	if err := writer.Write([]byte("test record ok")); err != nil {
+		t.Fatalf("first write shouldn't fail: %v", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("Close() failed: %v", err)
+	}
+
+	err := writer.Write([]byte("test record"))
+	if err == nil {
+		t.Fatal("Write() after Close() should have failed but didn't")
+	}
+	if !strings.Contains(err.Error(), "invalid operation: attempted to write to closed writer") {
+		t.Errorf("Expected error to contain 'invalid operation: attempted to write to closed writer', got %q", err.Error())
+	}
 }
