@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "loglib",
+    srcs = ["loglib.go"],
+    importpath = "github.com/gonzojive/heatpump/cmd/heatpump-logger/loglib",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_ryszard_tfutils//go/tfrecord"],
+)
+
+go_test(
+    name = "loglib_test",
+    srcs = ["loglib_test.go"],
+    embed = [":loglib"],
+    deps = ["@com_github_google_go_cmp//cmp"],
+)
