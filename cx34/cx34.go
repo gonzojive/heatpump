@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/goburrow/modbus"
@@ -16,6 +17,8 @@ import (
 	"github.com/gonzojive/heatpump/mdtable"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
 	"github.com/gonzojive/heatpump/units"
+	"github.com/gonzojive/heatpump/util/lockutil"
+	"github.com/gonzojive/heatpump/util/modbusutil"
 	"github.com/howeyc/crc16"
 	"github.com/martinlindhe/unit"
 	"go.uber.org/multierr"
@@ -38,6 +41,11 @@ const (
 	firstHoldingRegister Register = 1
 	lastHoldingRegister  Register = 350
 	registersPerRead              = 120
+)
+
+const (
+	// If commands aren't spaced apart enough in time, it's possible for them to collide.
+	modbusCommandSpacing = time.Millisecond * 20
 )
 
 // Mode indicates the protocol that should be used to communicate with the CX34.
@@ -106,8 +114,10 @@ func Connect(p *Params) (*Client, error) {
 		return nil, fmt.Errorf("Connect failed: %w", err)
 	}
 
-	client := modbus.NewClient(handler)
-	c := &Client{c: client}
+	modbusClient := modbusutil.ClientWithLock(
+		modbus.NewClient(handler),
+		lockutil.WithGuaranteedTimeSinceLastRelease(&sync.Mutex{}, modbusCommandSpacing))
+	c := &Client{c: modbusClient}
 
 	if err := c.CheckConnection(); err != nil {
 		return nil, err
@@ -239,8 +249,8 @@ func StateFromProto(msg *chiltrix.State) (*State, error) {
 	return &State{msg.CollectionTime.AsTime(), m}, nil
 }
 
-// Report returns a human readable summary of the state of the heat pump.
-func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) string {
+// Report returns a markdown table of register values.
+func (s *State) RegisterValuesTable(omitZeros bool, interestingRegisters map[Register]bool) string {
 	type entry struct {
 		reg   Register
 		value uint16
@@ -259,16 +269,17 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 		return entries[i].reg < entries[j].reg
 	})
 
-	registerValueSnapshot := func() string {
-		b := &mdtable.Builder{}
-		b.SetAlignment([]mdtable.Alignment{mdtable.Left, mdtable.Left, mdtable.Left})
-		b.SetHeader([]string{"Register no.", "Register name", "Value"})
-		for _, e := range entries {
-			b.AddRow([]string{fmt.Sprintf("%d", e.reg), e.reg.String(), fmt.Sprintf("%d", e.value)})
-		}
-		return b.Build()
-	}()
+	b := &mdtable.Builder{}
+	b.SetAlignment([]mdtable.Alignment{mdtable.Left, mdtable.Left, mdtable.Left})
+	b.SetHeader([]string{"Register no.", "Register name", "Value"})
+	for _, e := range entries {
+		b.AddRow([]string{fmt.Sprintf("%d", e.reg), e.reg.String(), fmt.Sprintf("%d", e.value)})
+	}
+	return b.Build()
+}
 
+// Report returns a human readable summary of the state of the heat pump.
+func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) string {
 	return fmt.Sprintf(`## Summary of heatpump state
 
 * AC Mode: %s
@@ -309,9 +320,7 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 			return fmt.Sprintf("%s (32 may indicate P5 error code)", valueStr)
 		}(),
 
-		registerValueSnapshot)
-
-	return registerValueSnapshot
+		s.RegisterValuesTable(omitZeros, interestingRegisters))
 }
 
 func formatTemp(temp unit.Temperature) string {
