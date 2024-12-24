@@ -45,7 +45,7 @@ const (
 
 const (
 	// If commands aren't spaced apart enough in time, it's possible for them to collide.
-	modbusCommandSpacing = time.Millisecond * 20
+	modbusCommandSpacing = time.Millisecond * 50
 )
 
 // Mode indicates the protocol that should be used to communicate with the CX34.
