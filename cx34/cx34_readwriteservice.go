@@ -30,7 +30,7 @@ func (s *ReadWriteServiceServer) SetParameter(ctx context.Context, req *chiltrix
 func (s *ReadWriteServiceServer) GetState(ctx context.Context, _ *chiltrix.GetStateRequest) (*chiltrix.State, error) {
 	state, err := s.client.ReadState()
 	if err != nil {
-		status.Errorf(codes.Internal, "error reading state of Chiltrix heat pump: %v", err)
+		return nil, status.Errorf(codes.Internal, "error reading state of Chiltrix heat pump: %v", err)
 	}
 	return state.Proto(), nil
 }
