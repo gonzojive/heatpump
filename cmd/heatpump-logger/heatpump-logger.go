@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang/glog"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/gonzojive/heatpump/cmd/heatpump-logger/loglib"
 	"github.com/gonzojive/heatpump/grpcspec"
@@ -20,12 +21,14 @@ import (
 	"go.uber.org/fx"
 
 	fancoilpb "github.com/gonzojive/heatpump/proto/fancoil"
+	logpb "github.com/gonzojive/heatpump/proto/logs"
 )
 
 var (
 	httpPort           = flag.Int("status-http-port", 8081, "HTTP server port for reporting the logger's status.")
 	dataDir            = flag.String("data-dir", "", "Directory where .")
 	newLogFileInterval = flag.Duration("log-file-interval", time.Hour, "Maximum amount of time between initial log file creation and its finalization.")
+	collectionInterval = flag.Duration("collection-interval", time.Second*10, "Polling interval for collecting state of devices.")
 
 	readWriteServiceParams = grpcspec.ClientParamsFlag{
 		Value: grpcspec.NewClientParamsBuilder().
@@ -102,15 +105,29 @@ func periodicallyLogHeatpumpState(
 	for {
 		select {
 		case <-ticker.C:
+			now := time.Now()
 			state, err := heatpumpClient.GetState(ctx, &chiltrix.GetStateRequest{})
+
+			record := &logpb.HeatpumpLogEntry{
+				CollectionTime: timestamppb.New(now),
+			}
+
 			if err != nil {
 				glog.Errorf("error getting heatpump state: %v", err)
+				record.Value = &logpb.HeatpumpLogEntry_Error{
+					Error: err.Error(),
+				}
+			} else {
+				record.Value = &logpb.HeatpumpLogEntry_RegisterValues{
+					RegisterValues: state.GetRegisterValues(),
+				}
 			}
-			registerSnapshotBytes, err := proto.Marshal(state.GetRegisterValues())
+
+			recordBytes, err := proto.Marshal(record)
 			if err != nil {
 				glog.Errorf("error encoding RegisterValues proto: %v", err)
 			}
-			if err := logger.logWriter.Write(registerSnapshotBytes); err != nil {
+			if err := logger.logWriter.Write(recordBytes); err != nil {
 				glog.Errorf("error writing RegisterValues proto: %v", err)
 			}
 		case <-done:
@@ -121,7 +138,7 @@ func periodicallyLogHeatpumpState(
 
 func newLoggingService(lc fx.Lifecycle, heatpumpClient chiltrix.ReadWriteServiceClient) *LoggingService {
 	service := &LoggingService{}
-	doneCh := make(chan struct{})
+	var doneCh chan struct{}
 	wg := &sync.WaitGroup{}
 	var loggerCtx context.Context
 	var cancelLoggerCtx context.CancelFunc
@@ -130,11 +147,12 @@ func newLoggingService(lc fx.Lifecycle, heatpumpClient chiltrix.ReadWriteService
 			if *dataDir == "" {
 				return fmt.Errorf("invalid --data-dir argument (blank)")
 			}
+			doneCh = make(chan struct{})
 			loggerCtx, cancelLoggerCtx = context.WithCancel(context.Background())
 			service.logWriter = loglib.NewPeriodicMultiFileTFRecordWriter(
 				loggerCtx,
 				time.Now,
-				filepath.Join(*dataDir, "cx34-RegisterSnapshot"),
+				filepath.Join(*dataDir, "cx34-HeatpumpLogEntry"),
 				".tfrecord",
 				*newLogFileInterval,
 			)
@@ -142,11 +160,12 @@ func newLoggingService(lc fx.Lifecycle, heatpumpClient chiltrix.ReadWriteService
 			go func() {
 				wg.Add(1)
 				defer wg.Done()
-				periodicallyLogHeatpumpState(loggerCtx, time.Second*10, doneCh, service, heatpumpClient)
+				periodicallyLogHeatpumpState(loggerCtx, *collectionInterval, doneCh, service, heatpumpClient)
 			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
+			close(doneCh)
 			cancelLoggerCtx()
 			wg.Wait()
 			return service.logWriter.Close()
@@ -159,7 +178,7 @@ func newHTTPServer(lc fx.Lifecycle, loggingService *LoggingService) *http.Server
 	mux := http.NewServeMux()
 	// Add your handler for /index.md here
 	mux.HandleFunc("/index.md", func(w http.ResponseWriter, r *http.Request) {
-		markdown := ""
+		markdown := "TODO"
 		w.Header().Set("Content-Type", "text/markdown")
 		fmt.Fprint(w, markdown)
 	})
