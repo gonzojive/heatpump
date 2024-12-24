@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "dashboard2",
+    srcs = [
+        "dashboard.go",
+        "dashboard_cache.go",
+        "dashboard_css.go",
+        "dashboard_javascript.go",
+    ],
+    importpath = "github.com/gonzojive/heatpump/dashboard2",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cx34",
+        "//mdtable",
+        "//proto/chiltrix",
+        "//units",
+        "@com_github_golang_glog//:glog",
+        "@com_github_golang_protobuf//proto",
+        "@com_github_yuin_goldmark//:goldmark",
+        "@com_github_yuin_goldmark//extension",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_protobuf//types/known/timestamppb",
+    ],
+)

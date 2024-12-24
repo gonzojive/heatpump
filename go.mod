@@ -34,8 +34,8 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/teambition/rrule-go v1.7.3
 	github.com/yuin/goldmark v1.4.13
-	go.uber.org/multierr v1.6.0
-	go.uber.org/zap v1.16.0
+	go.uber.org/multierr v1.10.0
+	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.26.0
 	golang.org/x/net v0.28.0
 	golang.org/x/sync v0.8.0
@@ -68,6 +68,7 @@ require (
 	go.opentelemetry.io/otel v1.28.0 // indirect
 	go.opentelemetry.io/otel/metric v1.28.0 // indirect
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
+	go.uber.org/dig v1.18.0 // indirect
 	golang.org/x/time v0.6.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
@@ -101,7 +102,7 @@ require (
 	github.com/tidwall/rtree v0.0.0-20180113144539-6cd427091e0e // indirect
 	github.com/tidwall/tinyqueue v0.0.0-20180302190814-1e39f5511563 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.uber.org/atomic v1.7.0 // indirect
+	go.uber.org/fx v1.23.0
 	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 	golang.org/x/oauth2 v0.22.0
 	golang.org/x/sys v0.24.0 // indirect

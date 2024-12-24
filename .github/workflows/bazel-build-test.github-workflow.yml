@@ -1,5 +1,5 @@
 name: Bazel build and test
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+run-name: ${{ github.actor }} build and test 🚀
 on: [push]
 jobs:
   Bazel-Build-And-Test:

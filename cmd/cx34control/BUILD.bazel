@@ -1,0 +1,33 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "cx34control_lib",
+    srcs = ["cx34control.go"],
+    importpath = "github.com/gonzojive/heatpump/cmd/cx34control",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//cx34",
+        "//proto/chiltrix",
+        "@com_github_golang_glog//:glog",
+        "@com_github_yuin_goldmark//:goldmark",
+        "@com_github_yuin_goldmark//extension",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//reflection",
+        "@org_golang_x_sync//errgroup",
+    ],
+)
+
+go_binary(
+    name = "cx34control",
+    embed = [":cx34control_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_binary(
+    name = "cx34control_pi",
+    #goarch = "arm64",
+    embed = [":cx34control_lib"],
+    goarch = "arm",
+    goos = "linux",
+    visibility = ["//visibility:public"],
+)

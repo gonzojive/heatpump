@@ -17,6 +17,10 @@ service Historian {
 service ReadWriteService {
     // Change a parameter.
     rpc SetParameter (SetParameterRequest) returns (SetParameterResponse) {}
+
+
+    // Retrieve the state of the heatpump (all modbus parameters).
+    rpc GetState (GetStateRequest) returns (State) {}
 }
 
 // State captures the state of the heat pump at a given instant for archival purposes.
@@ -36,6 +40,9 @@ message RegisterSnapshot {
     // Protobuf only supports 32-bit values, otherwise we would use uint16.
     map<uint32, uint32> holding_register_values = 1;
 }
+
+// Request proto for GetState.
+message GetStateRequest {}
 
 // QueryStreamRequest specifies a request for heatpump states.
 message QueryStreamRequest {
@@ -70,7 +77,7 @@ message StateDiff {
 }
 
 message SetParameterRequest {
-    // If specifies, updates the target heating mode temperature.
+    // If specified, updates the target heating mode temperature.
     Temperature target_heating_mode_temperature = 1;
 
     // Any other register.

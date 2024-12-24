@@ -3,11 +3,22 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "cx34dash_lib",
     srcs = ["cx34dash.go"],
+    data = [
+        "cx34dash.html",
+    ],
     importpath = "github.com/gonzojive/heatpump/cmd/cx34dash",
     visibility = ["//visibility:private"],
     deps = [
+        "//cx34",
         "//dashboard",
+        "//fancoil",
+        "//grpcspec",
+        "//proto/chiltrix",
+        "//proto/fancoil",
         "@com_github_golang_glog//:glog",
+        "@com_github_martinlindhe_unit//:unit",
+        "@io_bazel_rules_go//go/runfiles:go_default_library",
+        "@org_uber_go_fx//:fx",
     ],
 )
 

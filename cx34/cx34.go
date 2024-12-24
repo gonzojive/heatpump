@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/goburrow/modbus"
@@ -16,10 +17,13 @@ import (
 	"github.com/gonzojive/heatpump/mdtable"
 	"github.com/gonzojive/heatpump/proto/chiltrix"
 	"github.com/gonzojive/heatpump/units"
+	"github.com/gonzojive/heatpump/util/lockutil"
+	"github.com/gonzojive/heatpump/util/modbusutil"
 	"github.com/howeyc/crc16"
+	"github.com/martinlindhe/unit"
 	"go.uber.org/multierr"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -37,6 +41,11 @@ const (
 	firstHoldingRegister Register = 1
 	lastHoldingRegister  Register = 350
 	registersPerRead              = 120
+)
+
+const (
+	// If commands aren't spaced apart enough in time, it's possible for them to collide.
+	modbusCommandSpacing = time.Millisecond * 50
 )
 
 // Mode indicates the protocol that should be used to communicate with the CX34.
@@ -62,7 +71,6 @@ type Params struct {
 
 // Client is used to communicate with the Chiltrix CX34 heat pump.
 type Client struct {
-	chiltrix.ReadWriteServiceServer
 	c modbus.Client
 }
 
@@ -106,8 +114,10 @@ func Connect(p *Params) (*Client, error) {
 		return nil, fmt.Errorf("Connect failed: %w", err)
 	}
 
-	client := modbus.NewClient(handler)
-	c := &Client{c: client}
+	modbusClient := modbusutil.ClientWithLock(
+		modbus.NewClient(handler),
+		lockutil.WithGuaranteedTimeSinceLastRelease(&sync.Mutex{}, modbusCommandSpacing))
+	c := &Client{c: modbusClient}
 
 	if err := c.CheckConnection(); err != nil {
 		return nil, err
@@ -143,22 +153,28 @@ func (c *Client) ReadState() (*State, error) {
 	return &State{time.Now(), m}, nil
 }
 
+// Return an implementation of [chiltrix.ReadWriteServiceServer] backed by this
+// [Client].
+func (c *Client) ReadWriteServiceServer() *ReadWriteServiceServer {
+	return &ReadWriteServiceServer{client: c}
+}
+
 // SetParameter sets the target heating temperature for the CX34.
 func (c *Client) SetParameter(ctx context.Context, req *chiltrix.SetParameterRequest) (*chiltrix.SetParameterResponse, error) {
 	if req.GetTargetHeatingModeTemperature() != nil {
 		if err := c.setHeatingTemp(units.FromCelsius(req.GetTargetHeatingModeTemperature().GetDegreesCelcius())); err != nil {
-			return nil, grpc.Errorf(codes.Internal, "error setting temperature: %v", err)
+			return nil, status.Errorf(codes.Internal, "error setting temperature: %v", err)
 		}
 	}
 	if req.GetRegisterValue() != nil {
 		if v := req.GetRegisterValue().GetRegister(); v > math.MaxUint16 {
-			return nil, grpc.Errorf(codes.InvalidArgument, "invalid register %d is out of range", v)
+			return nil, status.Errorf(codes.InvalidArgument, "invalid register %d is out of range", v)
 		}
 		if v := req.GetRegisterValue().GetValue(); v > math.MaxUint16 {
-			return nil, grpc.Errorf(codes.InvalidArgument, "invalid register value %d is out of range", v)
+			return nil, status.Errorf(codes.InvalidArgument, "invalid register value %d is out of range", v)
 		}
 		if err := c.setRegisterValue(uint16(req.RegisterValue.GetRegister()), uint16(req.RegisterValue.GetValue())); err != nil {
-			return nil, grpc.Errorf(codes.Internal, "error setting register: %v", err)
+			return nil, status.Errorf(codes.Internal, "error setting register: %v", err)
 		}
 	}
 	return &chiltrix.SetParameterResponse{}, nil
@@ -233,8 +249,8 @@ func StateFromProto(msg *chiltrix.State) (*State, error) {
 	return &State{msg.CollectionTime.AsTime(), m}, nil
 }
 
-// Report returns a human readable summary of the state of the heat pump.
-func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) string {
+// Report returns a markdown table of register values.
+func (s *State) RegisterValuesTable(omitZeros bool, interestingRegisters map[Register]bool) string {
 	type entry struct {
 		reg   Register
 		value uint16
@@ -252,12 +268,63 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].reg < entries[j].reg
 	})
+
 	b := &mdtable.Builder{}
+	b.SetAlignment([]mdtable.Alignment{mdtable.Left, mdtable.Left, mdtable.Left})
 	b.SetHeader([]string{"Register no.", "Register name", "Value"})
 	for _, e := range entries {
 		b.AddRow([]string{fmt.Sprintf("%d", e.reg), e.reg.String(), fmt.Sprintf("%d", e.value)})
 	}
 	return b.Build()
+}
+
+// Report returns a human readable summary of the state of the heat pump.
+func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) string {
+	return fmt.Sprintf(`## Summary of heatpump state
+
+* AC Mode: %s
+* Ambient Temp: %s
+* AC Target Temp: %s
+* Water Inlet Temp: %s
+* Water Outlet Temp: %s
+* Water flow rate: %.1f L/m
+* Electric power: %.1f A * %.01f V = %.01f W
+* Useful heat rate: %.1f W
+* COP: %s
+* Fault code: %s
+
+## Register value snapshot
+
+%s`,
+		s.ACMode(),
+		formatTemp(s.AmbientTemp()),
+		formatTemp(s.ACTargetTemp()),
+		formatTemp(s.ACInletWaterTemp()),
+		formatTemp(s.ACOutletWaterTemp()),
+		s.FlowRate().LitersPerMinute(),
+		s.ACCurrent().Amperes(), s.ACVoltage().Volts(), s.ApparentPower().Watts(),
+		s.UsefulHeatRate().Watts(),
+		func() string {
+			cop, ok := s.COP()
+			if !ok {
+				return "n/a due to low electric power draw"
+			}
+			return fmt.Sprintf("%.01f", cop)
+		}(),
+		func() string {
+			value, ok := s.RegisterValues()[CurrentFaultCode]
+			valueStr := "n/a"
+			if ok {
+				valueStr = fmt.Sprintf("%d", value)
+			}
+			return fmt.Sprintf("%s (32 may indicate P5 error code)", valueStr)
+		}(),
+
+		s.RegisterValuesTable(omitZeros, interestingRegisters))
+}
+
+func formatTemp(temp unit.Temperature) string {
+	return fmt.Sprintf("%.1f°C (%.1f°F)", temp.Celsius(), temp.Fahrenheit())
 }
 
 // String returns a human readable summary of the state of the heat pump.
