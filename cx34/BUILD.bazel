@@ -12,6 +12,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//mdtable",
+        "//proto/chiltrix:chiltrix_go_proto",
         "//units",
         "//util/lockutil",
         "//util/modbusutil",

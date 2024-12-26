@@ -10,6 +10,7 @@ go_library(
     deps = [
         "//cloud/acls",
         "//cloud/google/cloudconfig",
+        "//proto/controller:controller_go_proto",
         "//util/grpcserverutil",
         "@com_github_golang_glog//:glog",
         "@org_golang_google_grpc//:grpc",

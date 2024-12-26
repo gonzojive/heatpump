@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/gonzojive/heatpump/cloud/acls/deviceauth",
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/controller:controller_go_proto",
         "//util/grpcserverutil",
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//credentials",

@@ -13,6 +13,7 @@ go_library(
     deps = [
         "//cx34",
         "//mdtable",
+        "//proto/chiltrix:chiltrix_go_proto",
         "//units",
         "@com_github_golang_glog//:glog",
         "@com_github_golang_protobuf//proto",

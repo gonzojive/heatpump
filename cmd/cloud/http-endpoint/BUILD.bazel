@@ -32,6 +32,7 @@ go_library(
         "//cloud/acls/server2serverauth",
         "//cloud/google/cloudconfig",
         "//cloud/httpendpoint",
+        "//proto/controller:controller_go_proto",
         "//util/grpcserverutil",
         "@com_github_golang_glog//:glog",
         "@org_golang_google_grpc//:grpc",

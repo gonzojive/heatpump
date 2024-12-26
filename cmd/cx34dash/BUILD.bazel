@@ -13,6 +13,8 @@ go_library(
         "//dashboard",
         "//fancoil",
         "//grpcspec",
+        "//proto/chiltrix:chiltrix_go_proto",
+        "//proto/fancoil:fancoil_go_proto",
         "@com_github_golang_glog//:glog",
         "@com_github_martinlindhe_unit//:unit",
         "@io_bazel_rules_go//go/runfiles",

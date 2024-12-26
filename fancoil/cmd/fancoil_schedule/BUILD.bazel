@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/gonzojive/heatpump/fancoil/cmd/fancoil_schedule",
     visibility = ["//visibility:private"],
     deps = [
+        "//proto/fancoil:fancoil_go_proto",
         "@com_github_golang_glog//:glog",
         "@com_github_martinlindhe_unit//:unit",
         "@com_github_teambition_rrule_go//:rrule-go",
