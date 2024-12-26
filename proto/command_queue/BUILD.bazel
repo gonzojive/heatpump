@@ -10,19 +10,11 @@ proto_library(
 
 go_proto_library(
     name = "command_queue_go_proto",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
     importpath = "github.com/gonzojive/heatpump/proto/command_queue",
-    output_files = ["command_queue.pb.go"],
+    output_files = [
+        "command_queue.pb.go",
+    ],
     proto = ":command_queue_proto",
     visibility = ["//visibility:public"],
-)
-
-go_library(
-    name = "command_queue",
-    srcs = ["command_queue.pb.go"],
-    importpath = "github.com/gonzojive/heatpump/proto/command_queue",
-    visibility = ["//visibility:public"],
-    deps = [
-        "@org_golang_google_protobuf//reflect/protoreflect",
-        "@org_golang_google_protobuf//runtime/protoimpl",
-    ],
 )

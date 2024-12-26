@@ -10,7 +10,6 @@ module(
 )
 
 bazel_dep(name = "aspect_bazel_lib", version = "2.10.0")
-
 bazel_dep(
     name = "protobuf",
     version = "27.1",

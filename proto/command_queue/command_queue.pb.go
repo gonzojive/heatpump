@@ -7,6 +7,10 @@
 package command_queue
 
 import (
+	context "context"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -729,4 +733,153 @@ func file_proto_command_queue_command_queue_proto_init() {
 	file_proto_command_queue_command_queue_proto_rawDesc = nil
 	file_proto_command_queue_command_queue_proto_goTypes = nil
 	file_proto_command_queue_command_queue_proto_depIdxs = nil
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConnInterface
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion6
+
+// CommandQueueServiceClient is the client API for CommandQueueService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type CommandQueueServiceClient interface {
+	Listen(ctx context.Context, opts ...grpc.CallOption) (CommandQueueService_ListenClient, error)
+	ListTopics(ctx context.Context, in *ListTopicsRequest, opts ...grpc.CallOption) (*ListTopicsResponse, error)
+}
+
+type commandQueueServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewCommandQueueServiceClient(cc grpc.ClientConnInterface) CommandQueueServiceClient {
+	return &commandQueueServiceClient{cc}
+}
+
+func (c *commandQueueServiceClient) Listen(ctx context.Context, opts ...grpc.CallOption) (CommandQueueService_ListenClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_CommandQueueService_serviceDesc.Streams[0], "/heatpump.command_queue.CommandQueueService/Listen", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &commandQueueServiceListenClient{stream}
+	return x, nil
+}
+
+type CommandQueueService_ListenClient interface {
+	Send(*ListenRequest) error
+	Recv() (*ListenResponse, error)
+	grpc.ClientStream
+}
+
+type commandQueueServiceListenClient struct {
+	grpc.ClientStream
+}
+
+func (x *commandQueueServiceListenClient) Send(m *ListenRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *commandQueueServiceListenClient) Recv() (*ListenResponse, error) {
+	m := new(ListenResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *commandQueueServiceClient) ListTopics(ctx context.Context, in *ListTopicsRequest, opts ...grpc.CallOption) (*ListTopicsResponse, error) {
+	out := new(ListTopicsResponse)
+	err := c.cc.Invoke(ctx, "/heatpump.command_queue.CommandQueueService/ListTopics", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CommandQueueServiceServer is the server API for CommandQueueService service.
+type CommandQueueServiceServer interface {
+	Listen(CommandQueueService_ListenServer) error
+	ListTopics(context.Context, *ListTopicsRequest) (*ListTopicsResponse, error)
+}
+
+// UnimplementedCommandQueueServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedCommandQueueServiceServer struct {
+}
+
+func (*UnimplementedCommandQueueServiceServer) Listen(CommandQueueService_ListenServer) error {
+	return status.Errorf(codes.Unimplemented, "method Listen not implemented")
+}
+func (*UnimplementedCommandQueueServiceServer) ListTopics(context.Context, *ListTopicsRequest) (*ListTopicsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTopics not implemented")
+}
+
+func RegisterCommandQueueServiceServer(s *grpc.Server, srv CommandQueueServiceServer) {
+	s.RegisterService(&_CommandQueueService_serviceDesc, srv)
+}
+
+func _CommandQueueService_Listen_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(CommandQueueServiceServer).Listen(&commandQueueServiceListenServer{stream})
+}
+
+type CommandQueueService_ListenServer interface {
+	Send(*ListenResponse) error
+	Recv() (*ListenRequest, error)
+	grpc.ServerStream
+}
+
+type commandQueueServiceListenServer struct {
+	grpc.ServerStream
+}
+
+func (x *commandQueueServiceListenServer) Send(m *ListenResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *commandQueueServiceListenServer) Recv() (*ListenRequest, error) {
+	m := new(ListenRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _CommandQueueService_ListTopics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTopicsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommandQueueServiceServer).ListTopics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/heatpump.command_queue.CommandQueueService/ListTopics",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommandQueueServiceServer).ListTopics(ctx, req.(*ListTopicsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _CommandQueueService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "heatpump.command_queue.CommandQueueService",
+	HandlerType: (*CommandQueueServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListTopics",
+			Handler:    _CommandQueueService_ListTopics_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Listen",
+			Handler:       _CommandQueueService_Listen_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "proto/command_queue/command_queue.proto",
 }

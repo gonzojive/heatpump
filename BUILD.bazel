@@ -2,6 +2,8 @@ load("@bazel_gazelle//:def.bzl", "gazelle")
 
 # gazelle:prefix github.com/gonzojive/heatpump
 # gazelle:map_kind go_proto_library go_proto_library //bazel:go_proto_library.bzl
+# gazelle:go_grpc_compilers	@io_bazel_rules_go//proto:go_grpc
+# gazelle:exclude *.pb.go
 gazelle(name = "gazelle")
 
 gazelle(
