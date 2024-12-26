@@ -7,7 +7,6 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//cx34",
-        "//proto/chiltrix",
         "@com_github_golang_glog//:glog",
         "@com_github_yuin_goldmark//:goldmark",
         "@com_github_yuin_goldmark//extension",

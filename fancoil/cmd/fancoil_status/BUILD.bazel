@@ -7,7 +7,6 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//fancoil",
-        "//proto/fancoil",
         "@com_github_golang_glog//:glog",
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//reflection",

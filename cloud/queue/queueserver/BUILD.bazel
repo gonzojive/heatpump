@@ -10,7 +10,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/acls",
-        "//proto/command_queue",
         "//util/lockutil",
         "@com_github_golang_glog//:glog",
         "@com_google_cloud_go_pubsub//:pubsub",

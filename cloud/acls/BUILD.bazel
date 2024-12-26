@@ -11,7 +11,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/google/cloudconfig",
-        "//proto/controller",
         "//util/must",
         "@com_github_golang_glog//:glog",
         "@com_github_golang_protobuf//proto",

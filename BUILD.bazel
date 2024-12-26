@@ -1,6 +1,7 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
 # gazelle:prefix github.com/gonzojive/heatpump
+# gazelle:map_kind go_proto_library go_proto_library //bazel:go_proto_library.bzl
 gazelle(name = "gazelle")
 
 gazelle(

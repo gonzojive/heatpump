@@ -6,7 +6,6 @@ go_library(
     importpath = "github.com/gonzojive/heatpump/cloud/queue/queueclient",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/command_queue",
         "//util/retry",
         "@com_github_golang_glog//:glog",
     ],

@@ -8,7 +8,6 @@ go_library(
     deps = [
         "//cx34",
         "//db",
-        "//proto/chiltrix",
         "//tempsensor",
         "@com_github_golang_glog//:glog",
         "@com_github_yuin_goldmark//:goldmark",

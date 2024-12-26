@@ -1,6 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
-load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//bazel:go_proto_library.bzl", "go_proto_library")
 
 proto_library(
     name = "fancoil_proto",
@@ -14,15 +14,21 @@ proto_library(
 
 go_proto_library(
     name = "fancoil_go_proto",
-    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
     importpath = "github.com/gonzojive/heatpump/proto/fancoil",
     proto = ":fancoil_proto",
     visibility = ["//visibility:public"],
+    output_files = ["fancoil.pb.go"],
 )
 
 go_library(
     name = "fancoil",
-    embed = [":fancoil_go_proto"],
+    srcs = ["fancoil.pb.go"],
     importpath = "github.com/gonzojive/heatpump/proto/fancoil",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_golang_protobuf//protoc-gen-go/descriptor",
+        "@com_github_golang_protobuf//ptypes/timestamp",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//runtime/protoimpl",
+    ],
 )

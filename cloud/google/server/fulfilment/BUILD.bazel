@@ -11,8 +11,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//cloud/google/cloudconfig",
-        "//proto/controller",
-        "//proto/fancoil",
         "//util/must",
         "@com_github_golang_glog//:glog",
         "@com_github_rmrobinson_google_smart_home_action_go//:google-smart-home-action-go",
