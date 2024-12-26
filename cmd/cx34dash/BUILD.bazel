@@ -15,7 +15,7 @@ go_library(
         "//grpcspec",
         "@com_github_golang_glog//:glog",
         "@com_github_martinlindhe_unit//:unit",
-        "@io_bazel_rules_go//go/runfiles:go_default_library",
+        "@io_bazel_rules_go//go/runfiles",
         "@org_uber_go_fx//:fx",
     ],
 )
