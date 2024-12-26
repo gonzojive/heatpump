@@ -5,3 +5,4 @@ bazel-heatpump
 local-secrets
 .terraform
 .terraform.lock.hcl
+.data/
