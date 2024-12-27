@@ -58,9 +58,7 @@ go_deps.from_file(go_mod = "//:go.mod")
 # All *direct* Go dependencies of the module have to be listed explicitly.
 use_repo(
     go_deps,
-    "com_github_adrg_xdg",
     "com_github_dgraph_io_badger_v3",
-    "com_github_eclipse_paho_mqtt_golang",
     "com_github_go_oauth2_oauth2_v4",
     "com_github_goburrow_modbus",
     "com_github_goburrow_serial",
@@ -72,7 +70,6 @@ use_repo(
     "com_github_inhies_go_bytesize",
     "com_github_johnsiilver_golib",
     "com_github_martinlindhe_unit",
-    "com_github_mtraver_iotcore",
     "com_github_rmrobinson_google_smart_home_action_go",
     "com_github_samber_lo",
     "com_github_stretchr_testify",

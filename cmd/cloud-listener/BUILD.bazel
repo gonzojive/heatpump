@@ -10,7 +10,7 @@ go_library(
         "//cloud/queue/queueclient",
         "//proto/command_queue:command_queue_go_proto",
         "//proto/controller:controller_go_proto",
-        "//proto/fancoil",
+        "//proto/fancoil:fancoil_go_proto",
         "//util/grpcserverutil",
         "@com_github_golang_glog//:glog",
         "@org_golang_google_grpc//:grpc",

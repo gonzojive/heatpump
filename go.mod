@@ -12,10 +12,8 @@ require (
 	cloud.google.com/go/firestore v1.17.0
 	cloud.google.com/go/pubsub v1.45.3
 	cloud.google.com/go/secretmanager v1.14.2
-	github.com/adrg/xdg v0.5.3
 	github.com/bazelbuild/rules_go v0.51.0
 	github.com/dgraph-io/badger/v3 v3.2103.5
-	github.com/eclipse/paho.mqtt.golang v1.5.0
 	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/goburrow/modbus v0.1.0
 	github.com/goburrow/serial v0.1.0
@@ -27,7 +25,6 @@ require (
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf
 	github.com/johnsiilver/golib v1.2.2
 	github.com/martinlindhe/unit v0.0.0-20230420213220-4adfd7d0a0d6
-	github.com/mtraver/iotcore v0.0.0-20230423225757-7fc79eb2c3c4
 	github.com/rmrobinson/google-smart-home-action-go v0.0.0-20240904013938-6a5c976efa23
 	github.com/samber/lo v1.47.0
 	github.com/stretchr/testify v1.10.0
@@ -66,7 +63,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v24.12.23+incompatible // indirect

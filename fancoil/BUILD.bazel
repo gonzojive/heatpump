@@ -11,7 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//mdtable",
-        "//proto/fancoil",
+        "//proto/fancoil:fancoil_go_proto",
         "//util/lockutil",
         "//util/modbusutil",
         "@com_github_goburrow_modbus//:modbus",
@@ -35,7 +35,7 @@ go_test(
     ],
     embed = [":fancoil"],
     deps = [
-        "//proto/fancoil",
+        "//proto/fancoil:fancoil_go_proto",
         "@com_github_google_go_cmp//cmp",
         "@org_golang_google_protobuf//testing/protocmp",
     ],
