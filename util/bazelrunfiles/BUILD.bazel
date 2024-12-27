@@ -5,5 +5,5 @@ go_library(
     srcs = ["bazelrunfiles.go"],
     importpath = "github.com/gonzojive/heatpump/util/bazelrunfiles",
     visibility = ["//visibility:public"],
-    deps = ["@io_bazel_rules_go//go/tools/bazel:go_default_library"],
+    deps = ["@io_bazel_rules_go//go/tools/bazel"],
 )

@@ -12,7 +12,7 @@ go_library(
         "//cloud/acls",
         "//cloud/acls/server2serverauth",
         "//cloud/google/cloudconfig",
-        "//proto/controller",
+        "//proto/controller:controller_go_proto",
         "@com_github_golang_glog//:glog",
         "@com_github_golang_protobuf//proto",
         "@com_google_cloud_go_firestore//:firestore",

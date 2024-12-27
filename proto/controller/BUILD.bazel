@@ -1,6 +1,5 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//bazel:go_proto_library.bzl", "go_proto_library")
 
 proto_library(
     name = "controller_proto",
@@ -16,14 +15,8 @@ go_proto_library(
     name = "controller_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
     importpath = "github.com/gonzojive/heatpump/proto/controller",
+    output_files = ["controller.pb.go"],
     proto = ":controller_proto",
     visibility = ["//visibility:public"],
-    deps = ["//proto/fancoil"],
-)
-
-go_library(
-    name = "controller",
-    embed = [":controller_go_proto"],
-    importpath = "github.com/gonzojive/heatpump/proto/controller",
-    visibility = ["//visibility:public"],
+    deps = ["//proto/fancoil:fancoil_go_proto"],
 )

@@ -8,9 +8,9 @@ go_library(
     deps = [
         "//cmd/heatpump-logger/loglib",
         "//grpcspec",
-        "//proto/chiltrix",
-        "//proto/fancoil",
-        "//proto/logs",
+        "//proto/chiltrix:chiltrix_go_proto",
+        "//proto/fancoil:fancoil_go_proto",
+        "//proto/logs:logs_go_proto",
         "@com_github_golang_glog//:glog",
         "@org_golang_google_protobuf//proto",
         "@org_golang_google_protobuf//types/known/timestamppb",
