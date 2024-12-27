@@ -1,3 +1,6 @@
+// Package loglib provides utilities for writing and managing TFRecord files,
+// including support for writing to multiple files and creating new files
+// periodically.
 package loglib
 
 import (
@@ -19,13 +22,14 @@ import (
 // https://www.tensorflow.org/tutorials/load_data/tfrecord#tfrecords_format_details
 // states each record is stored in
 //
-// uint64 length
-// uint32 masked_crc32_of_length
-// byte   data[length]
-// uint32 masked_crc32_of_data
+//	uint64 length
+//	uint32 masked_crc32_of_length
+//	byte   data[length]
+//	uint32 masked_crc32_of_data
 const overheadPerRecord = 8 + 4 + 4
 
-// SingleFileTFRecordWriter is used to write a set of records to a single TFRecord file.
+// SingleFileTFRecordWriter is used to write a set of records to a single
+// TFRecord file.
 type SingleFileTFRecordWriter struct {
 	ioWriter             io.Writer
 	lock                 sync.Mutex
@@ -33,7 +37,7 @@ type SingleFileTFRecordWriter struct {
 	bytesWritten         int
 }
 
-// Write writs a single TFRecord record and returns any error that might occur.
+// Write writes a single TFRecord record and returns any error that might occur.
 func (w *SingleFileTFRecordWriter) Write(record []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
@@ -46,7 +50,9 @@ func (w *SingleFileTFRecordWriter) Write(record []byte) error {
 	return nil
 }
 
-// MultiFileTFRecordWriter is used to write a set of records to a single TFRecord file.
+// MultiFileTFRecordWriter is used to write a set of records to a series of
+// TFRecord files. It handles the creation of new files based on a provided
+// policy and finalizes a file when no more records will be written to it.
 type MultiFileTFRecordWriter struct {
 	lock               sync.Mutex
 	writerName         string
@@ -80,6 +86,13 @@ func TimestampedNewFileCreator(ctx context.Context, prefix, suffix string, now f
 }
 
 // NewMultiFileTFRecordWriter returns an object for writing records to a set of files.
+//
+// `newFile` is a function that creates a new file and returns its name and an
+// io.Writer for writing to it. `shouldFinalizeFile` is a function that
+// determines whether the current file should be finalized based on its name,
+// the number of records written, and the total bytes written. `finalizeFile` is
+// a function that finalizes the current file. It is called when
+// `shouldFinalizeFile` returns true or when Close is called.
 func NewMultiFileTFRecordWriter(
 	newFile func() (string, io.Writer, error),
 	shouldFinalizeFile func(name string, recordCount, byteCount int) bool,
@@ -93,7 +106,11 @@ func NewMultiFileTFRecordWriter(
 	}
 }
 
-// Write writs a single TFRecord record and returns any error that might occur.
+// Write writes a single TFRecord record and returns any error that might occur.
+//
+// Write checks if a new file needs to be created based on the result of
+// `shouldFinalizeFile`. If a new file is needed, it finalizes the current file
+// using `finalizeFile` before creating a new one.
 func (w *MultiFileTFRecordWriter) Write(record []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
@@ -122,7 +139,7 @@ func (w *MultiFileTFRecordWriter) Write(record []byte) error {
 	return nil
 }
 
-// Close finalizes the active active file and disables further writing.
+// Close finalizes the active file and disables further writing.
 func (w *MultiFileTFRecordWriter) Close() error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
@@ -139,14 +156,16 @@ func (w *MultiFileTFRecordWriter) Close() error {
 	return nil
 }
 
-// NewPeriodicMultiFileTFRecordWriter returns a [MultiFileTFRecordWriter] that creates a new file
-// periodically, based on the specified singleFileInterval.
+// NewPeriodicMultiFileTFRecordWriter returns a [MultiFileTFRecordWriter] that
+// creates a new file periodically, based on the specified singleFileInterval.
 //
-// The returned MultiFileTFRecordWriter will create a new file when the current time is
-// greater than or equal to the most recent file creation time plus the singleFileInterval.
-// Each file will be named using the filePrefix and a timestamp in the format YYYYMMDD-HHMM.
+// The returned MultiFileTFRecordWriter will create a new file when the current
+// time is greater than or equal to the most recent file creation time plus the
+// singleFileInterval. Each file will be named using the filePrefix and a
+// timestamp in the format YYYYMMDD-HHMM.
 //
-// The now parameter allows for injecting a custom time source for testing or other purposes.
+// The now parameter allows for injecting a custom time source for testing or
+// other purposes.
 func NewPeriodicMultiFileTFRecordWriter(
 	ctx context.Context,
 	now func() time.Time,
@@ -176,11 +195,19 @@ func NewPeriodicMultiFileTFRecordWriter(
 	)
 }
 
+// RecordOrErr represents either a successful record of type T or an error.
 type RecordOrErr[T any] struct {
 	Record T
 	Error  error
 }
 
+// ReadAllRecords reads all TFRecords from the given reader and yields them one
+// by one.
+//
+// It continues reading until it encounters an io.EOF error, which signifies the
+// end of the file, or until another error occurs. Each record or error is
+// yielded to the provided function. If an error other than io.EOF is
+// encountered, it yields the error and then stops processing further records.
 func ReadAllRecords(reader io.Reader) iter.Seq[RecordOrErr[[]byte]] {
 	return func(yield func(RecordOrErr[[]byte]) bool) {
 		for {
