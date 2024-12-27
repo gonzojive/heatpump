@@ -1,0 +1,21 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//bazel:go_proto_library.bzl", "go_proto_library")
+
+proto_library(
+    name = "logs_proto",
+    srcs = ["log.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/chiltrix:chiltrix_proto",
+        "@com_google_protobuf//:timestamp_proto",
+    ],
+)
+
+go_proto_library(
+    name = "logs_go_proto",
+    importpath = "github.com/gonzojive/heatpump/proto/logs",
+    output_files = ["log.pb.go"],
+    proto = ":logs_proto",
+    visibility = ["//visibility:public"],
+    deps = ["//proto/chiltrix:chiltrix_go_proto"],
+)

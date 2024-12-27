@@ -33,7 +33,7 @@ bazel_dep(
 go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
 
 # Download an SDK for the host OS & architecture as well as common remote execution platforms.
-go_sdk.download(version = "1.22.10")
+go_sdk.download(version = "1.23.4")
 
 bazel_dep(
     name = "gazelle",
@@ -71,6 +71,7 @@ use_repo(
     "com_github_johnsiilver_golib",
     "com_github_martinlindhe_unit",
     "com_github_rmrobinson_google_smart_home_action_go",
+    "com_github_ryszard_tfutils",
     "com_github_samber_lo",
     "com_github_stretchr_testify",
     "com_github_teambition_rrule_go",

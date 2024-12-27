@@ -82,6 +82,11 @@ func (s PumpSpeed) String() string {
 	return fmt.Sprintf("%d/10", int(s))
 }
 
+// AsFractionOfMaxSpeed returns the pump speed divided by the max pump speed.
+func (s PumpSpeed) AsFractionOfMaxSpeed() float32 {
+	return float32(s) / 10
+}
+
 // CoefficientOfPerformance is the ratio of useful heat supplied or removed from
 // the water stream divided by the amount of electrical energy energy being used
 // by the heat pump.

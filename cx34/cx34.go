@@ -288,6 +288,7 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 * Water Inlet Temp: %s
 * Water Outlet Temp: %s
 * Water flow rate: %.1f L/m
+* Internal pump speed: %s
 * Electric power: %.1f A * %.01f V = %.01f W
 * Useful heat rate: %.1f W
 * COP: %s
@@ -302,6 +303,7 @@ func (s *State) Report(omitZeros bool, interestingRegisters map[Register]bool) s
 		formatTemp(s.ACInletWaterTemp()),
 		formatTemp(s.ACOutletWaterTemp()),
 		s.FlowRate().LitersPerMinute(),
+		s.InternalPumpSpeed(),
 		s.ACCurrent().Amperes(), s.ACVoltage().Volts(), s.ApparentPower().Watts(),
 		s.UsefulHeatRate().Watts(),
 		func() string {

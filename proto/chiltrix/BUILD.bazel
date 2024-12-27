@@ -12,7 +12,9 @@ go_proto_library(
     name = "chiltrix_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
     importpath = "github.com/gonzojive/heatpump/proto/chiltrix",
-    output_files = ["chiltrix.pb.go"],
+    output_files = [
+        "chiltrix.pb.go",
+    ],
     proto = ":chiltrix_proto",
     visibility = ["//visibility:public"],
 )

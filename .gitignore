@@ -5,4 +5,6 @@ bazel-heatpump
 local-secrets
 .terraform
 .terraform.lock.hcl
-.data/
+
+# The .data directory stores database and other files.
+/.data

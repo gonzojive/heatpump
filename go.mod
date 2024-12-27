@@ -1,6 +1,6 @@
 module github.com/gonzojive/heatpump
 
-go 1.22.10
+go 1.23.4
 
 // replace github.com/rmrobinson/google-smart-home-action-go => github.com/gonzojive/google-smart-home-action-go v0.0.1
 
@@ -26,6 +26,7 @@ require (
 	github.com/johnsiilver/golib v1.2.2
 	github.com/martinlindhe/unit v0.0.0-20230420213220-4adfd7d0a0d6
 	github.com/rmrobinson/google-smart-home-action-go v0.0.0-20240904013938-6a5c976efa23
+	github.com/ryszard/tfutils v0.0.0-20161028141955-98de232c7c68
 	github.com/samber/lo v1.47.0
 	github.com/stretchr/testify v1.10.0
 	github.com/teambition/rrule-go v1.8.2

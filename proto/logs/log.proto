@@ -1,0 +1,23 @@
+// Protocol buffers for storing Chiltrix CX34 data.
+syntax = "proto3";
+
+package gonzojive.heatpump.logs;
+
+option go_package = "github.com/gonzojive/heatpump/proto/logs";
+
+import "google/protobuf/timestamp.proto";
+import "proto/chiltrix/chiltrix.proto";
+
+// HeatpumpLogEntry captures the state of the heat pump a given instant in time.
+message HeatpumpLogEntry {
+    // Collection time.
+    .google.protobuf.Timestamp collection_time = 1;
+
+    oneof value {
+        // Modbus register values.
+        chiltrix.RegisterSnapshot register_values = 2;
+
+        // If collection of the heatpump state failed, the log message is stored.
+        string error = 3;
+    }
+}
