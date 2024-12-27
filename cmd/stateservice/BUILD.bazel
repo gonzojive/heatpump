@@ -11,7 +11,7 @@ go_library(
         "//cloud/acls",
         "//cloud/google/cloudconfig",
         "//cloud/stateservice",
-        "//proto/controller",
+        "//proto/controller:controller_go_proto",
         "//util/grpcserverutil",
         "@com_github_golang_glog//:glog",
         "@org_golang_google_grpc//:grpc",

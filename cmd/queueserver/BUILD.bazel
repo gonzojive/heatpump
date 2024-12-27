@@ -11,7 +11,7 @@ go_library(
         "//cloud/acls",
         "//cloud/google/cloudconfig",
         "//cloud/queue/queueserver",
-        "//proto/command_queue",
+        "//proto/command_queue:command_queue_go_proto",
         "@com_github_golang_glog//:glog",
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//credentials",

@@ -12,8 +12,10 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//mdtable",
-        "//proto/chiltrix",
+        "//proto/chiltrix:chiltrix_go_proto",
         "//units",
+        "//util/lockutil",
+        "//util/modbusutil",
         "@com_github_goburrow_modbus//:modbus",
         "@com_github_goburrow_serial//:serial",
         "@com_github_golang_glog//:glog",

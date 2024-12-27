@@ -1,6 +1,5 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
-load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//bazel:go_proto_library.bzl", "go_proto_library")
 
 proto_library(
     name = "command_queue_proto",
@@ -12,13 +11,9 @@ go_proto_library(
     name = "command_queue_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
     importpath = "github.com/gonzojive/heatpump/proto/command_queue",
+    output_files = [
+        "command_queue.pb.go",
+    ],
     proto = ":command_queue_proto",
-    visibility = ["//visibility:public"],
-)
-
-go_library(
-    name = "command_queue",
-    embed = [":command_queue_go_proto"],
-    importpath = "github.com/gonzojive/heatpump/proto/command_queue",
     visibility = ["//visibility:public"],
 )
