@@ -1,6 +1,6 @@
 module github.com/gonzojive/heatpump
 
-go 1.22.10
+go 1.23.4
 
 // replace github.com/rmrobinson/google-smart-home-action-go => github.com/gonzojive/google-smart-home-action-go v0.0.1
 

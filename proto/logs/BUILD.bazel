@@ -14,7 +14,7 @@ proto_library(
 go_proto_library(
     name = "logs_go_proto",
     importpath = "github.com/gonzojive/heatpump/proto/logs",
-    output_files = ["logs.pb.go"],
+    output_files = ["log.pb.go"],
     proto = ":logs_proto",
     visibility = ["//visibility:public"],
     deps = ["//proto/chiltrix:chiltrix_go_proto"],
