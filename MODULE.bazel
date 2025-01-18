@@ -73,6 +73,8 @@ use_repo(
     "com_github_rmrobinson_google_smart_home_action_go",
     "com_github_ryszard_tfutils",
     "com_github_samber_lo",
+    "com_github_spf13_cobra",
+    "com_github_spf13_pflag",
     "com_github_stretchr_testify",
     "com_github_teambition_rrule_go",
     "com_github_yuin_goldmark",

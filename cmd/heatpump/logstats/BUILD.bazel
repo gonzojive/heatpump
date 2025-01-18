@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "logstats",
+    srcs = ["logstats.go"],
+    importpath = "github.com/gonzojive/heatpump/cmd/heatpump/logstats",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cmd/heatpump-logger/loglib",
+        "//cx34",
+        "//internal/collections",
+        "//proto/chiltrix:chiltrix_go_proto",
+        "//proto/logs:logs_go_proto",
+        "@com_github_golang_glog//:glog",
+        "@com_github_golang_protobuf//proto",
+        "@com_github_spf13_cobra//:cobra",
+        "@org_golang_x_sync//errgroup",
+    ],
+)

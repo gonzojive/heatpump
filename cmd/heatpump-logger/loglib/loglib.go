@@ -63,6 +63,10 @@ type MultiFileTFRecordWriter struct {
 	newWriter          func() (string, io.Writer, error)
 }
 
+// TimestampedFileTimeFormat is the format of the timestamps used by
+// [TimestampedFileTimeFormat]
+const TimestampedFileTimeFormat = "20060102-1504"
+
 // TimestampedNewFileCreator returns a function that creates a new file with the
 // given prefix and a -YYYYMMDD-HHMM suffix based on the current time.
 //

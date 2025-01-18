@@ -28,6 +28,8 @@ require (
 	github.com/rmrobinson/google-smart-home-action-go v0.0.0-20240904013938-6a5c976efa23
 	github.com/ryszard/tfutils v0.0.0-20161028141955-98de232c7c68
 	github.com/samber/lo v1.47.0
+	github.com/spf13/cobra v1.7.0
+	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
 	github.com/teambition/rrule-go v1.8.2
 	github.com/yuin/goldmark v1.7.8
@@ -72,6 +74,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
