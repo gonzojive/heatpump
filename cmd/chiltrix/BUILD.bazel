@@ -1,0 +1,57 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@pkg_with_runfiles//:defs.bzl", "pkg_with_runfiles")
+
+go_library(
+    name = "chiltrix_lib",
+    srcs = [
+        "dashboard.go",
+        "historian.go",
+        "install.go",
+        "main.go",
+        "readwrite.go",
+        "status.go",
+    ],
+    importpath = "github.com/gonzojive/heatpump/cmd/chiltrix",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//cx34",
+        "//dashboard",
+        "//db",
+        "//fancoil",
+        "//grpcspec",
+        "//linuxserial",
+        "//proto/chiltrix:chiltrix_go_proto",
+        "//proto/fancoil:fancoil_go_proto",
+        "//tempsensor",
+        "@com_github_golang_glog//:glog",
+        "@com_github_martinlindhe_unit//:unit",
+        "@com_github_spf13_cobra//:cobra",
+        "@com_github_spf13_pflag//:pflag",
+        "@io_bazel_rules_go//go/runfiles",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//credentials/insecure",
+        "@org_golang_google_grpc//reflection",
+        "@org_golang_x_sync//errgroup",
+        "@org_uber_go_fx//:fx",
+    ],
+)
+
+go_binary(
+    name = "chiltrix",
+    embed = [":chiltrix_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_binary(
+    name = "chiltrix_pi",
+    embed = [":chiltrix_lib"],
+    goarch = "arm",
+    goos = "linux",
+    visibility = ["//visibility:public"],
+)
+
+pkg_with_runfiles(
+    name = "chiltrix_release",
+    binary = ":chiltrix_pi",
+    binary_path_in_archive = "chiltrix",
+)
